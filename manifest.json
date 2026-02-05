@@ -1,0 +1,25 @@
+
+{
+  "short_name": "Elite Photo",
+  "name": "Findaphotographer Elite",
+  "description": "L'écosystème premium pour les créatifs visuels, propulsé par Gemini 3 Pro.",
+  "icons": [
+    {
+      "src": "https://firebasestorage.googleapis.com/v0/b/cl-assets.appspot.com/o/find_photographer_elite_logo.png?alt=media",
+      "type": "image/png",
+      "sizes": "192x192",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "https://firebasestorage.googleapis.com/v0/b/cl-assets.appspot.com/o/find_photographer_elite_logo.png?alt=media",
+      "type": "image/png",
+      "sizes": "512x512",
+      "purpose": "any maskable"
+    }
+  ],
+  "start_url": "/",
+  "background_color": "#050B14",
+  "display": "standalone",
+  "scope": "/",
+  "theme_color": "#050B14"
+}
