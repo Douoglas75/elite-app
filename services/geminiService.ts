@@ -11,7 +11,6 @@ const cleanJson = (text: string) => {
 };
 
 const getAI = () => {
-  // Directly use process.env.API_KEY string when initializing the client instance as per guidelines
   const key = process.env.API_KEY;
   if (!key || key === "undefined" || key === "") {
     console.warn("Elite AI: API Key missing in process.env.API_KEY");
@@ -22,6 +21,29 @@ const getAI = () => {
 
 export const checkApiKeyStatus = (): boolean => {
   return getAI() !== null;
+};
+
+export const generateVisualInspiration = async (prompt: string): Promise<string | null> => {
+  const ai = getAI();
+  if (!ai) return null;
+
+  try {
+    const response = await ai.models.generateContent({
+      model: 'gemini-2.5-flash-image',
+      contents: {
+        parts: [{ text: `Generate a high-quality professional photography inspiration image for a moodboard. Theme: ${prompt}. Professional lighting, aesthetic composition.` }]
+      },
+      config: {
+        imageConfig: { aspectRatio: "1:1" }
+      }
+    });
+
+    const part = response.candidates?.[0]?.content?.parts.find(p => p.inlineData);
+    return part?.inlineData ? `data:${part.inlineData.mimeType};base64,${part.inlineData.data}` : null;
+  } catch (error) {
+    console.error("Image Generation Error:", error);
+    return null;
+  }
 };
 
 export const analyzeUserStyle = async (base64Images: string[]): Promise<string> => {
@@ -64,7 +86,6 @@ export const applyAIRetouch = async (imageData: string): Promise<string> => {
       }
     });
     
-    // Iterate through all parts to find the image part as per nano banana series model guidelines
     const part = response.candidates?.[0]?.content?.parts.find(p => p.inlineData);
     return part?.inlineData ? `data:${part.inlineData.mimeType};base64,${part.inlineData.data}` : imageData;
   } catch (error) {
@@ -78,7 +99,7 @@ export const generateQuizQuestions = async (): Promise<QuizQuestion[]> => {
 
   try {
     const response = await ai.models.generateContent({
-      model: "gemini-3-pro-preview", // Upgraded to gemini-3-pro-preview for complex generation task
+      model: "gemini-3-pro-preview",
       contents: "Génère 5 questions de quiz expert photo au format JSON.",
       config: {
         responseMimeType: "application/json",
@@ -108,7 +129,7 @@ export const getAICollaborationSuggestions = async (currentUser: User, viewedUse
 
   try {
     const response = await ai.models.generateContent({
-      model: "gemini-3-pro-preview", // Upgraded to gemini-3-pro-preview for advanced reasoning tasks
+      model: "gemini-3-pro-preview",
       contents: `Pourquoi un ${currentUser.type} et un ${viewedUser.type} devraient collaborer ?`,
       config: {
         responseMimeType: "application/json",
@@ -175,7 +196,7 @@ export const generateContractClauses = async (professionalType: string, clientTy
   
   try {
     const response = await ai.models.generateContent({
-      model: "gemini-3-pro-preview", // Upgraded to gemini-3-pro-preview for advanced reasoning on legal clauses
+      model: "gemini-3-pro-preview",
       contents: `5 clauses de contrat entre un ${professionalType} et un ${clientType}.`,
       config: {
         responseMimeType: "application/json",
