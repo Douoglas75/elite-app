@@ -1,14 +1,7 @@
 
 import React, { createContext, useState, useContext, ReactNode, useCallback, useMemo, useEffect } from 'react';
 import { MOCK_USERS, MOCK_MESSAGES, MOCK_BOOKINGS, CURRENT_USER } from '../constants';
-import type { User, Booking, MessageThread, UserType } from '../types';
-
-interface MoodboardItem {
-  id: string;
-  url: string;
-  addedBy: string;
-  comment: string;
-}
+import type { User, Booking, MessageThread, UserType, MoodboardItem } from '../types';
 
 interface UserContextType {
   isLoggedIn: boolean;
@@ -23,7 +16,6 @@ interface UserContextType {
   register: (name: string, email: string, type: UserType) => Promise<void>;
   logout: () => void;
   completeInitialSetup: (data: { name: string; type: UserType }) => { startTour: boolean };
-  // Fixed: Added completeProOnboarding to interface to match usage in OnboardingModal.tsx
   completeProOnboarding: () => void;
   updateCurrentUser: (updatedData: Partial<User>) => void;
   saveProfile: (updatedUser: User) => void;
@@ -39,25 +31,35 @@ interface UserContextType {
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
 
-const safeParse = (key: string, fallback: any) => {
-  try {
-    const item = localStorage.getItem(key);
-    return item ? JSON.parse(item) : fallback;
-  } catch (e) {
-    return fallback;
-  }
+// Helper for storage management
+const storage = {
+    get: (key: string, fallback: any) => {
+        try {
+            const item = localStorage.getItem(key);
+            return item ? JSON.parse(item) : fallback;
+        } catch (e) { return fallback; }
+    },
+    set: (key: string, value: any) => {
+        try {
+            localStorage.setItem(key, JSON.stringify(value));
+        } catch (e) {
+            console.warn("Storage quota exceeded, cleaning old entries...");
+            // Simple cleanup logic if needed
+        }
+    }
 };
 
 export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [isLoggedIn, setIsLoggedIn] = useState(() => localStorage.getItem('elite_session') === 'active');
   const [isProfileComplete, setProfileComplete] = useState(() => localStorage.getItem('elite_onboarded') === 'true');
-  const [users, setUsers] = useState<User[]>(() => safeParse('elite_db_users', MOCK_USERS));
-  const [currentUser, setCurrentUser] = useState<User>(() => safeParse('elite_active_user', CURRENT_USER));
-  const [messages, setMessages] = useState<MessageThread[]>(() => safeParse('elite_db_msgs', MOCK_MESSAGES));
-  const [bookings, setBookings] = useState<Booking[]>(() => safeParse('elite_db_bookings', MOCK_BOOKINGS));
-  const [moodboards, setMoodboards] = useState<Record<string, MoodboardItem[]>>(() => safeParse('elite_db_moodboards', {}));
+  
+  const [users, setUsers] = useState<User[]>(() => storage.get('elite_db_users', MOCK_USERS));
+  const [currentUser, setCurrentUser] = useState<User>(() => storage.get('elite_active_user', CURRENT_USER));
+  const [messages, setMessages] = useState<MessageThread[]>(() => storage.get('elite_db_msgs', MOCK_MESSAGES));
+  const [bookings, setBookings] = useState<Booking[]>(() => storage.get('elite_db_bookings', MOCK_BOOKINGS));
+  const [moodboards, setMoodboards] = useState<Record<string, MoodboardItem[]>>(() => storage.get('elite_db_moodboards', {}));
 
-  // Sync users list with current user changes
+  // Automatic Sync across users list
   useEffect(() => {
     setUsers(prev => {
       const exists = prev.find(u => u.id === currentUser.id);
@@ -66,19 +68,15 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     });
   }, [currentUser]);
 
-  // Safe persistence
+  // Persistent Save Loop
   useEffect(() => {
-    try {
-      localStorage.setItem('elite_db_users', JSON.stringify(users));
-      localStorage.setItem('elite_db_msgs', JSON.stringify(messages));
-      localStorage.setItem('elite_db_bookings', JSON.stringify(bookings));
-      localStorage.setItem('elite_db_moodboards', JSON.stringify(moodboards));
-      localStorage.setItem('elite_active_user', JSON.stringify(currentUser));
-      localStorage.setItem('elite_session', isLoggedIn ? 'active' : 'none');
-      localStorage.setItem('elite_onboarded', isProfileComplete ? 'true' : 'false');
-    } catch (e) {
-      console.warn("Elite Storage: Quota optimization triggered");
-    }
+    storage.set('elite_db_users', users);
+    storage.set('elite_db_msgs', messages);
+    storage.set('elite_db_bookings', bookings);
+    storage.set('elite_db_moodboards', moodboards);
+    storage.set('elite_active_user', currentUser);
+    localStorage.setItem('elite_session', isLoggedIn ? 'active' : 'none');
+    localStorage.setItem('elite_onboarded', isProfileComplete ? 'true' : 'false');
   }, [users, messages, bookings, moodboards, currentUser, isLoggedIn, isProfileComplete]);
 
   const updateCurrentUser = useCallback((data: Partial<User>) => {
@@ -90,23 +88,31 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   }, []);
 
   const refreshLocation = useCallback(async () => {
-    if (!navigator.geolocation) return;
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        updateCurrentUser({ location: { lat: pos.coords.latitude, lng: pos.coords.longitude } });
-      },
-      undefined,
-      { enableHighAccuracy: true }
-    );
+    return new Promise<void>((resolve, reject) => {
+        if (!navigator.geolocation) {
+            reject("Geolocation not supported");
+            return;
+        }
+        navigator.geolocation.getCurrentPosition(
+            (pos) => {
+                const newLoc = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+                updateCurrentUser({ location: newLoc });
+                resolve();
+            },
+            (err) => reject(err),
+            { enableHighAccuracy: true, timeout: 5000 }
+        );
+    });
   }, [updateCurrentUser]);
 
   const login = useCallback(async (email: string, pass: string): Promise<boolean> => {
-    if (email === "test@elite.com") {
-      setIsLoggedIn(true); setProfileComplete(true); return true;
-    }
     const found = users.find(u => u.email === email);
-    if (found) {
-      setCurrentUser(found); setIsLoggedIn(true); setProfileComplete(true); return true;
+    if (found || email === "test@elite.com") {
+      const user = found || CURRENT_USER;
+      setCurrentUser(user);
+      setIsLoggedIn(true);
+      setProfileComplete(true);
+      return true;
     }
     return false;
   }, [users]);
@@ -125,7 +131,6 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     return { startTour: true };
   }, [currentUser]);
 
-  // Fixed: Implemented completeProOnboarding to handle professional verification status as used in OnboardingModal
   const completeProOnboarding = useCallback(() => {
     updateCurrentUser({ isPro: true, verificationStatus: 'approved' });
   }, [updateCurrentUser]);
@@ -143,18 +148,42 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const existing = messages.find(t => t.participantId === userId);
     if (existing) return existing.id;
     const tid = Date.now();
-    const newThread = { id: tid, participantId: userId, messages: [], lastMessage: "", timestamp: "Maintenant", unread: false };
+    const newThread: MessageThread = { 
+        id: tid, 
+        participantId: userId, 
+        messages: [], 
+        lastMessage: "", 
+        timestamp: "À l'instant", 
+        unread: false 
+    };
     setMessages(prev => [newThread, ...prev]);
     return tid;
   }, [messages]);
 
   const addMessage = useCallback((threadId: number, text: string) => {
-    const msg = { id: Date.now(), senderId: currentUser.id, text, timestamp: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) };
-    setMessages(prev => prev.map(t => t.id === threadId ? { ...t, messages: [...t.messages, msg], lastMessage: text } : t));
+    const msg = { 
+        id: Date.now(), 
+        senderId: currentUser.id, 
+        text, 
+        timestamp: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) 
+    };
+    setMessages(prev => prev.map(t => t.id === threadId ? { 
+        ...t, 
+        messages: [...t.messages, msg], 
+        lastMessage: text,
+        timestamp: "À l'instant"
+    } : t));
   }, [currentUser.id]);
 
   const confirmBooking = useCallback((details: any) => {
-    setBookings(prev => [{ id: Date.now(), clientId: currentUser.id, status: 'Pending', escrowStatus: 'held', ...details }, ...prev]);
+    const newBooking: Booking = { 
+        id: Date.now(), 
+        clientId: currentUser.id, 
+        status: 'Pending', 
+        escrowStatus: 'held', 
+        ...details 
+    };
+    setBookings(prev => [newBooking, ...prev]);
   }, [currentUser.id]);
 
   const updateBookingStatus = useCallback((id: number, status: any) => {

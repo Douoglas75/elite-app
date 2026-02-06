@@ -22,6 +22,14 @@ export interface PortfolioItem {
   thumbnailUrl?: string;
 }
 
+export interface MoodboardItem {
+  id: string;
+  url: string;
+  addedBy: string;
+  comment: string;
+  timestamp: number;
+}
+
 export interface User {
   id: number;
   name: string;
@@ -48,10 +56,10 @@ export interface Booking {
     id: number;
     clientId: number;
     professionalId: number;
-    date: string; // ISO String or formatted
+    date: string;
     time: string;
-    duration: number; // in hours
-    status: 'Pending' | 'Confirmed' | 'Completed';
+    duration: number;
+    status: 'Pending' | 'Confirmed' | 'Completed' | 'Declined';
     escrowStatus: EscrowStatus;
     notes?: string;
     shootLocation?: string;
@@ -85,34 +93,4 @@ export interface MessageThread {
   lastMessage: string;
   timestamp: string;
   unread: boolean;
-}
-
-export interface ShootingSpot {
-  id: string;
-  name: string;
-  location: { lat: number; lng: number; };
-  description: string;
-  permissions: string;
-  photos: string[];
-}
-
-export interface PaymentMethod {
-  id: string;
-  type: 'visa' | 'mastercard';
-  last4: string;
-  expiry: string;
-  isDefault: boolean;
-}
-
-export interface Transaction {
-  id: string;
-  type: 'expense' | 'income';
-  amount: number;
-  description: string;
-  date: string;
-}
-
-export interface ARSessionConfig {
-    mediaUrl: string;
-    planeOrientation: 'vertical' | 'horizontal' | 'any';
 }

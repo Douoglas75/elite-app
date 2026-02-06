@@ -12,13 +12,14 @@ interface MapViewProps {
 }
 
 const MapView: React.FC<MapViewProps> = ({ filteredUsers }) => {
-  const { users: allUsers, currentUser } = useUser();
+  const { users: allUsers, currentUser, refreshLocation } = useUser();
   const { viewProfile } = useAppContext();
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<any>(null);
   const userLayerRef = useRef<any>(null);
   
   const [activeLayer, setActiveLayer] = useState<'users' | 'spots'>('users');
+  const [isLocating, setIsLocating] = useState(false);
 
   const displayUsers = filteredUsers || allUsers;
 
@@ -100,10 +101,26 @@ const MapView: React.FC<MapViewProps> = ({ filteredUsers }) => {
     });
   }, [displayUsers, currentUser, viewProfile]);
 
+  const handleLiveLocate = async () => {
+    if (isLocating) return;
+    setIsLocating(true);
+    try {
+        await refreshLocation();
+        if (mapInstanceRef.current) {
+            mapInstanceRef.current.flyTo([currentUser.location.lat, currentUser.location.lng], 15, { duration: 1.5 });
+        }
+    } catch (err) {
+        alert("Activez la géolocalisation dans vos paramètres système pour cette fonctionnalité.");
+    } finally {
+        setTimeout(() => setIsLocating(false), 2000);
+    }
+  };
+
   return (
     <div className="relative w-full h-full bg-[#050B14] overflow-hidden">
       <div ref={mapContainerRef} className="w-full h-full z-0" />
       
+      {/* HUD Overlay - Uses pointer-events-none to prevent click blockage */}
       <div className="absolute inset-0 z-[500] pointer-events-none flex flex-col justify-between p-4 md:p-6 pb-24 md:pb-8">
         <div className="flex justify-center">
           <div className="bg-[#050B14]/90 backdrop-blur-xl p-1 rounded-2xl border border-white/10 shadow-2xl flex gap-1 pointer-events-auto">
@@ -114,10 +131,10 @@ const MapView: React.FC<MapViewProps> = ({ filteredUsers }) => {
 
         <div className="flex justify-end items-end">
             <button 
-              onClick={() => mapInstanceRef.current?.flyTo([currentUser.location.lat, currentUser.location.lng], 15)} 
-              className="w-14 h-14 bg-white border border-black/5 rounded-2xl flex items-center justify-center text-[#050B14] shadow-2xl active:scale-90 transition-all pointer-events-auto"
+              onClick={handleLiveLocate}
+              className={`w-14 h-14 rounded-2xl flex items-center justify-center shadow-2xl active:scale-90 transition-all pointer-events-auto ${isLocating ? 'bg-blue-500 text-white animate-pulse' : 'bg-white text-[#050B14]'}`}
             >
-              <Icon name="locationMarker" className="w-7 h-7" />
+              <Icon name={isLocating ? "bolt" : "locationMarker"} className="w-7 h-7" />
             </button>
         </div>
       </div>
