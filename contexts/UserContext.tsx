@@ -29,52 +29,53 @@ interface UserContextType {
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
 
+const safeParse = (key: string, fallback: any) => {
+  try {
+    const item = localStorage.getItem(key);
+    return item ? JSON.parse(item) : fallback;
+  } catch (e) {
+    console.warn(`Storage error for ${key}:`, e);
+    return fallback;
+  }
+};
+
 export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [isLoggedIn, setIsLoggedIn] = useState(() => localStorage.getItem('elite_session') === 'active');
   const [isProfileComplete, setProfileComplete] = useState(() => localStorage.getItem('elite_onboarded') === 'true');
   
-  const [users, setUsers] = useState<User[]>(() => {
-    const saved = localStorage.getItem('elite_db_users');
-    return saved ? JSON.parse(saved) : MOCK_USERS;
-  });
+  const [users, setUsers] = useState<User[]>(() => safeParse('elite_db_users', MOCK_USERS));
+  const [currentUser, setCurrentUser] = useState<User>(() => safeParse('elite_active_user', CURRENT_USER));
+  const [messages, setMessages] = useState<MessageThread[]>(() => safeParse('elite_db_msgs', MOCK_MESSAGES));
+  const [bookings, setBookings] = useState<Booking[]>(() => safeParse('elite_db_bookings', MOCK_BOOKINGS));
+  const [analyticsLog, setAnalyticsLog] = useState<any[]>(() => safeParse('elite_analytics', []));
 
-  const [currentUser, setCurrentUser] = useState<User>(() => {
-    const saved = localStorage.getItem('elite_active_user');
-    return saved ? JSON.parse(saved) : CURRENT_USER;
-  });
-
-  const [messages, setMessages] = useState<MessageThread[]>(() => 
-    JSON.parse(localStorage.getItem('elite_db_msgs') || JSON.stringify(MOCK_MESSAGES))
-  );
-  
-  const [bookings, setBookings] = useState<Booking[]>(() => 
-    JSON.parse(localStorage.getItem('elite_db_bookings') || JSON.stringify(MOCK_BOOKINGS))
-  );
-
-  const [analyticsLog, setAnalyticsLog] = useState<any[]>(() => 
-    JSON.parse(localStorage.getItem('elite_analytics') || '[]')
-  );
-
-  // Synchronisation stricte : On s'assure que le currentUser est TOUJOURS dans la liste des users
+  // Sauvegarde sécurisée avec gestion de quota
   useEffect(() => {
+    try {
+      localStorage.setItem('elite_db_users', JSON.stringify(users));
+      localStorage.setItem('elite_db_msgs', JSON.stringify(messages));
+      localStorage.setItem('elite_db_bookings', JSON.stringify(bookings));
+      localStorage.setItem('elite_active_user', JSON.stringify(currentUser));
+      localStorage.setItem('elite_analytics', JSON.stringify(analyticsLog));
+      localStorage.setItem('elite_session', isLoggedIn ? 'active' : 'none');
+      localStorage.setItem('elite_onboarded', isProfileComplete ? 'true' : 'false');
+    } catch (e) {
+      if (e instanceof Error && e.name === 'QuotaExceededError') {
+        console.error("Stockage saturé. Impossible de sauvegarder les changements.");
+      }
+    }
+  }, [users, messages, bookings, currentUser, analyticsLog, isLoggedIn, isProfileComplete]);
+
+  // Synchronisation en temps réel de l'utilisateur actuel dans la liste globale
+  const syncUserToGlobalList = useCallback((user: User) => {
     setUsers(prev => {
-        const index = prev.findIndex(u => u.id === currentUser.id);
-        if (index === -1) return [...prev, currentUser];
+        const index = prev.findIndex(u => u.id === user.id);
+        if (index === -1) return [...prev, user];
         const newUsers = [...prev];
-        newUsers[index] = currentUser;
+        newUsers[index] = user;
         return newUsers;
     });
-  }, [currentUser.id]); // Uniquement sur l'ID au départ
-
-  useEffect(() => {
-    localStorage.setItem('elite_db_users', JSON.stringify(users));
-    localStorage.setItem('elite_db_msgs', JSON.stringify(messages));
-    localStorage.setItem('elite_db_bookings', JSON.stringify(bookings));
-    localStorage.setItem('elite_active_user', JSON.stringify(currentUser));
-    localStorage.setItem('elite_analytics', JSON.stringify(analyticsLog));
-    localStorage.setItem('elite_session', isLoggedIn ? 'active' : 'none');
-    localStorage.setItem('elite_onboarded', isProfileComplete ? 'true' : 'false');
-  }, [users, messages, bookings, currentUser, analyticsLog, isLoggedIn, isProfileComplete]);
+  }, []);
 
   const trackAction = useCallback((action: string, metadata: any) => {
     const entry = { ts: new Date().toISOString(), action, metadata, uid: currentUser.id };
@@ -84,37 +85,34 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const updateCurrentUser = useCallback((data: Partial<User>) => {
     setCurrentUser(prev => {
         const updated = { ...prev, ...data };
-        // On met aussi à jour la liste globale immédiatement pour la carte
-        setUsers(uPrev => uPrev.map(u => u.id === prev.id ? updated : u));
+        syncUserToGlobalList(updated);
         return updated;
     });
     trackAction('USER_UPDATE', data);
-  }, [trackAction]);
+  }, [trackAction, syncUserToGlobalList]);
 
   const refreshLocation = useCallback(async () => {
     return new Promise<void>((resolve, reject) => {
+        if (!navigator.geolocation) return reject("Non supporté");
         navigator.geolocation.getCurrentPosition(
             (pos) => {
-                updateCurrentUser({ 
-                    location: { lat: pos.coords.latitude, lng: pos.coords.longitude } 
-                });
+                const newLoc = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+                updateCurrentUser({ location: newLoc });
                 resolve();
             },
             (err) => reject(err),
-            { enableHighAccuracy: true }
+            { enableHighAccuracy: true, timeout: 10000 }
         );
     });
   }, [updateCurrentUser]);
 
   const login = useCallback(async (email: string, pass: string): Promise<boolean> => {
     await new Promise(r => setTimeout(r, 600));
-    
     if (email === "test@elite.com" || email === "admin@elite.com") {
       setIsLoggedIn(true);
       setProfileComplete(true);
       return true;
     }
-
     const user = users.find(u => u.email === email);
     if (user) {
       setCurrentUser(user);
@@ -128,18 +126,18 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const register = useCallback(async (name: string, email: string, type: UserType) => {
     const newUser = { ...CURRENT_USER, id: Date.now(), name, email, type, avatarUrl: `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=D2B48C&color=050B14` };
     setCurrentUser(newUser);
-    setUsers(prev => [...prev, newUser]);
+    syncUserToGlobalList(newUser);
     setIsLoggedIn(true);
     setProfileComplete(false);
-  }, []);
+  }, [syncUserToGlobalList]);
 
   const completeInitialSetup = useCallback((data: { name: string; type: UserType }) => {
     const updated = { ...currentUser, ...data, isPro: true };
     setCurrentUser(updated);
-    setUsers(prev => prev.map(u => u.id === currentUser.id ? updated : u));
+    syncUserToGlobalList(updated);
     setProfileComplete(true);
     return { startTour: true };
-  }, [currentUser]);
+  }, [currentUser, syncUserToGlobalList]);
 
   const logout = useCallback(() => {
     localStorage.removeItem('elite_session');
@@ -149,9 +147,9 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const saveProfile = useCallback((user: User) => {
     setCurrentUser(user);
-    setUsers(prev => prev.map(u => u.id === user.id ? user : u));
+    syncUserToGlobalList(user);
     setProfileComplete(true);
-  }, []);
+  }, [syncUserToGlobalList]);
 
   const startChat = useCallback((userId: number) => {
     const existing = messages.find(t => t.participantId === userId);

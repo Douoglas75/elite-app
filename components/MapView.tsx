@@ -17,12 +17,10 @@ const MapView: React.FC<MapViewProps> = ({ filteredUsers }) => {
   const mapInstanceRef = useRef<any>(null);
   const userLayerRef = useRef<any>(null);
   const spotLayerRef = useRef<any>(null);
-  const meMarkerRef = useRef<any>(null);
 
   const [activeLayer, setActiveLayer] = useState<'users' | 'spots'>('users');
   const [isLocating, setIsLocating] = useState(false);
 
-  // Utilise les utilisateurs filtrés ou tous les utilisateurs
   const displayUsers = filteredUsers || allUsers;
 
   useEffect(() => {
@@ -46,7 +44,8 @@ const MapView: React.FC<MapViewProps> = ({ filteredUsers }) => {
     userLayerRef.current = L.layerGroup().addTo(map);
     spotLayerRef.current = L.layerGroup();
 
-    handleBroadcastLocation(true);
+    // Premier refresh auto non bloquant
+    refreshLocation().catch(e => console.warn("GPS Initial fail:", e));
 
     const invalidateSize = () => map.invalidateSize();
     window.addEventListener('resize', invalidateSize);
@@ -97,22 +96,21 @@ const MapView: React.FC<MapViewProps> = ({ filteredUsers }) => {
         });
       
       userLayer.addLayer(m);
-      if (isMe) meMarkerRef.current = m;
     });
   }, [displayUsers, currentUser]);
 
-  const handleBroadcastLocation = async (isInitial = false) => {
-    if (!isInitial) setIsLocating(true);
+  const handleBroadcastLocation = async () => {
+    setIsLocating(true);
     try {
         await refreshLocation();
         const map = mapInstanceRef.current;
         if (map) {
-            map.flyTo([currentUser.location.lat, currentUser.location.lng], isInitial ? 13 : 15, { duration: 1.5 });
+            map.flyTo([currentUser.location.lat, currentUser.location.lng], 15, { duration: 1.5 });
         }
     } catch (err) {
         console.error("Signal GPS perdu", err);
     } finally {
-        if (!isInitial) setIsLocating(false);
+        setIsLocating(false);
     }
   };
 
@@ -130,7 +128,7 @@ const MapView: React.FC<MapViewProps> = ({ filteredUsers }) => {
   };
 
   return (
-    <div className="relative w-full h-full bg-[#f0f1f2] overflow-hidden">
+    <div className="relative w-full h-full bg-[#050B14] overflow-hidden">
       <div ref={mapContainerRef} className="w-full h-full" />
       
       <div className="absolute top-4 left-1/2 -translate-x-1/2 z-[400] w-auto">
@@ -140,9 +138,9 @@ const MapView: React.FC<MapViewProps> = ({ filteredUsers }) => {
         </div>
       </div>
 
-      <div className="absolute bottom-6 left-6 z-[400] flex flex-col gap-3">
+      <div className="absolute bottom-6 left-6 z-[400]">
           <button 
-            onClick={() => handleBroadcastLocation()}
+            onClick={handleBroadcastLocation}
             disabled={isLocating}
             className={`h-14 px-6 rounded-2xl border flex items-center gap-3 shadow-2xl transition-all active:scale-95 ${isLocating ? 'bg-blue-500/20 border-blue-500 text-blue-400' : 'bg-[#050B14] border-blue-500/30 text-white hover:bg-[#0D1625]'}`}
           >
