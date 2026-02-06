@@ -56,12 +56,13 @@ const App: React.FC = () => {
 
   const filteredUsers = useMemo(() => {
     return users.filter(user => {
-      if (user.id === currentUser.id) return false;
+      // On affiche l'utilisateur actuel sur la carte/liste s'il correspond aux filtres
       const matchesType = filterType === 'All' || user.type === filterType;
       const matchesAvailability = !filterAvailable || user.isAvailableNow;
       const matchesSearch = searchQuery.trim() === '' || 
         user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         user.headline.toLowerCase().includes(searchQuery.toLowerCase());
+      
       return matchesType && matchesAvailability && matchesSearch;
     });
   }, [users, currentUser.id, filterType, filterAvailable, searchQuery]);

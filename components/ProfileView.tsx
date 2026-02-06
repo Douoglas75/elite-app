@@ -1,4 +1,3 @@
-
 import React, { useRef, memo, useState } from 'react';
 import Icon from './Icon';
 import { useUser } from '../contexts/UserContext';
@@ -7,7 +6,7 @@ import type { PortfolioItem } from '../types';
 
 const ProfileView: React.FC = () => {
   const { currentUser: user, logout, updateCurrentUser } = useUser();
-  const { setOnboardingOpen, setEditingProfile, setActiveSubView, setFullScreenMedia } = useAppContext();
+  const { setEditingProfile, setActiveSubView, setFullScreenMedia } = useAppContext();
   const mediaInputRef = useRef<HTMLInputElement>(null);
   const [isUploading, setIsUploading] = useState(false);
 
@@ -16,10 +15,19 @@ const ProfileView: React.FC = () => {
   };
 
   const handleResetApp = () => {
-    if (confirm("Attention : Cela va effacer toutes vos données locales et vous déconnecter pour réinitialiser l'expérience Elite. Continuer ?")) {
+    if (confirm("Attention : Cela va effacer toutes vos données locales et vous déconnecter. Continuer ?")) {
         localStorage.clear();
         window.location.reload();
     }
+  };
+
+  const fileToBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = error => reject(error);
+    });
   };
 
   const handleMediaImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -29,28 +37,34 @@ const ProfileView: React.FC = () => {
     setIsUploading(true);
     const newItems: PortfolioItem[] = [];
 
-    for (let i = 0; i < filesList.length; i++) {
-        const file = filesList[i];
-        const isVideo = file.type.startsWith('video/');
-        const mediaUrl = URL.createObjectURL(file);
+    try {
+        for (let i = 0; i < filesList.length; i++) {
+            const file = filesList[i];
+            const isVideo = file.type.startsWith('video/');
+            const base64Data = await fileToBase64(file);
 
-        if (isVideo) {
-            newItems.push({
-                type: 'video',
-                url: mediaUrl,
-                thumbnailUrl: 'https://images.unsplash.com/photo-1536240478700-b869070f9279?auto=format&fit=crop&w=400'
-            });
-        } else {
-            newItems.push({
-                type: 'image',
-                url: mediaUrl
-            });
+            if (isVideo) {
+                newItems.push({
+                    type: 'video',
+                    url: base64Data,
+                    thumbnailUrl: 'https://images.unsplash.com/photo-1536240478700-b869070f9279?auto=format&fit=crop&w=400'
+                });
+            } else {
+                newItems.push({
+                    type: 'image',
+                    url: base64Data
+                });
+            }
         }
-    }
 
-    updateCurrentUser({ portfolio: [...user.portfolio, ...newItems] });
-    setIsUploading(false);
-    if (mediaInputRef.current) mediaInputRef.current.value = '';
+        updateCurrentUser({ portfolio: [...user.portfolio, ...newItems] });
+    } catch (err) {
+        console.error("Upload error:", err);
+        alert("Erreur lors de l'importation des fichiers.");
+    } finally {
+        setIsUploading(false);
+        if (mediaInputRef.current) mediaInputRef.current.value = '';
+    }
   };
 
   const removeMedia = (index: number) => {
@@ -115,7 +129,7 @@ const ProfileView: React.FC = () => {
                 disabled={isUploading}
                 className="text-[10px] font-black text-[#D2B48C] uppercase flex items-center gap-1"
             >
-                {isUploading ? 'Upload...' : 'Ajouter +'}
+                {isUploading ? 'Chargement...' : 'Ajouter +'}
             </button>
             <input 
                 type="file" 

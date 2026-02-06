@@ -18,12 +18,11 @@ const MapView: React.FC<MapViewProps> = ({ filteredUsers }) => {
   const userLayerRef = useRef<any>(null);
   const spotLayerRef = useRef<any>(null);
   const meMarkerRef = useRef<any>(null);
-  const userCircleRef = useRef<any>(null);
-  
+
   const [activeLayer, setActiveLayer] = useState<'users' | 'spots'>('users');
   const [isLocating, setIsLocating] = useState(false);
 
-  // Pour la découverte, on affiche tout le monde y compris soi-même si on est Live
+  // Utilise les utilisateurs filtrés ou tous les utilisateurs
   const displayUsers = filteredUsers || allUsers;
 
   useEffect(() => {
@@ -47,7 +46,6 @@ const MapView: React.FC<MapViewProps> = ({ filteredUsers }) => {
     userLayerRef.current = L.layerGroup().addTo(map);
     spotLayerRef.current = L.layerGroup();
 
-    // Premier refresh auto
     handleBroadcastLocation(true);
 
     const invalidateSize = () => map.invalidateSize();
@@ -62,7 +60,6 @@ const MapView: React.FC<MapViewProps> = ({ filteredUsers }) => {
     };
   }, []);
 
-  // Mise à jour des marqueurs
   useEffect(() => {
     const map = mapInstanceRef.current;
     const userLayer = userLayerRef.current;
@@ -74,7 +71,6 @@ const MapView: React.FC<MapViewProps> = ({ filteredUsers }) => {
       const isMe = user.id === currentUser.id;
       const isPhotog = user.type === 'Photographe' || user.type === 'Vidéaste';
       
-      // Style spécial pour "VOUS"
       const colorClass = isMe ? 'border-blue-500' : (isPhotog ? 'border-[#D2B48C]' : 'border-white');
       const bgClass = isMe ? 'bg-blue-500' : (isPhotog ? 'bg-[#D2B48C]' : 'bg-white');
 
@@ -137,7 +133,6 @@ const MapView: React.FC<MapViewProps> = ({ filteredUsers }) => {
     <div className="relative w-full h-full bg-[#f0f1f2] overflow-hidden">
       <div ref={mapContainerRef} className="w-full h-full" />
       
-      {/* Sélecteur de calque */}
       <div className="absolute top-4 left-1/2 -translate-x-1/2 z-[400] w-auto">
         <div className="bg-[#050B14]/90 backdrop-blur-xl p-1 rounded-2xl border border-white/10 shadow-2xl flex gap-1">
             <button onClick={() => toggleLayer('users')} className={`px-6 py-2 rounded-xl text-[10px] font-black tracking-widest transition-all uppercase whitespace-nowrap ${activeLayer === 'users' ? 'bg-[#D2B48C] text-[#050B14]' : 'text-slate-400'}`}>TALENTS</button>
@@ -145,7 +140,6 @@ const MapView: React.FC<MapViewProps> = ({ filteredUsers }) => {
         </div>
       </div>
 
-      {/* Bouton de BROADCAST (Le raccourci demandé) */}
       <div className="absolute bottom-6 left-6 z-[400] flex flex-col gap-3">
           <button 
             onClick={() => handleBroadcastLocation()}
@@ -163,7 +157,6 @@ const MapView: React.FC<MapViewProps> = ({ filteredUsers }) => {
           </button>
       </div>
 
-      {/* Bouton de recentrage standard */}
       <button 
         onClick={() => mapInstanceRef.current?.flyTo([currentUser.location.lat, currentUser.location.lng], 15)} 
         className="absolute bottom-6 right-6 z-[400] w-14 h-14 bg-white border border-black/5 rounded-2xl flex items-center justify-center text-[#050B14] shadow-2xl active:scale-90 transition-all group"
@@ -174,4 +167,4 @@ const MapView: React.FC<MapViewProps> = ({ filteredUsers }) => {
   );
 };
 
-export default MapView);
+export default memo(MapView);
