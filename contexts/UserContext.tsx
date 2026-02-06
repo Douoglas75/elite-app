@@ -41,9 +41,7 @@ const storage = {
     set: (key: string, value: any) => {
         try {
             localStorage.setItem(key, JSON.stringify(value));
-        } catch (e) {
-            console.error("Storage Error:", e);
-        }
+        } catch (e) { console.error(e); }
     }
 };
 
@@ -51,22 +49,8 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [isLoggedIn, setIsLoggedIn] = useState(() => localStorage.getItem('elite_session') === 'active');
   const [isProfileComplete, setProfileComplete] = useState(() => localStorage.getItem('elite_onboarded') === 'true');
   
-  // Initialisation des compteurs pour les mock users si absents
-  const initialUsers = MOCK_USERS.map(u => ({ 
-    ...u, 
-    completedShootsCount: u.completedShootsCount || Math.floor(Math.random() * 30) + 5 
-  }));
-  
   const [currentUser, setCurrentUser] = useState<User>(() => storage.get('elite_active_user', { ...CURRENT_USER }));
-  const [users, setUsers] = useState<User[]>(() => {
-    const saved = storage.get('elite_db_users', initialUsers);
-    const active = storage.get('elite_active_user', { ...CURRENT_USER });
-    if (!saved.find((u: User) => u.id === active.id)) {
-        return [active, ...saved];
-    }
-    return saved;
-  });
-  
+  const [users, setUsers] = useState<User[]>(() => storage.get('elite_db_users', MOCK_USERS));
   const [messages, setMessages] = useState<MessageThread[]>(() => storage.get('elite_db_msgs', MOCK_MESSAGES));
   const [bookings, setBookings] = useState<Booking[]>(() => storage.get('elite_db_bookings', MOCK_BOOKINGS));
   const [moodboards, setMoodboards] = useState<Record<string, MoodboardItem[]>>(() => storage.get('elite_db_moodboards', {}));
@@ -107,29 +91,6 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setCurrentUser(updatedUser);
   }, []);
 
-  const updateMoodboard = useCallback((bookingId: string, items: MoodboardItem[]) => {
-    setMoodboards(prev => ({ ...prev, [bookingId]: items }));
-  }, []);
-
-  const login = useCallback(async (email: string, pass: string): Promise<boolean> => {
-    const found = users.find(u => u.email === email);
-    if (found || email === "test@elite.com") {
-      const user = found || { ...CURRENT_USER };
-      setCurrentUser(user);
-      setIsLoggedIn(true);
-      setProfileComplete(true);
-      return true;
-    }
-    return false;
-  }, [users]);
-
-  const register = useCallback(async (name: string, email: string, types: UserType[]) => {
-    const newUser = { ...CURRENT_USER, id: Date.now(), name, email, types, completedShootsCount: 0 };
-    setCurrentUser(newUser);
-    setIsLoggedIn(true);
-    setProfileComplete(false);
-  }, []);
-
   const postReview = useCallback((booking: Booking, reviewData: { rating: number, comment: string }) => {
     const targetPro = users.find(u => u.id === booking.professionalId);
     if (!targetPro) return;
@@ -161,57 +122,56 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   }, [users, currentUser]);
 
-  const refreshLocation = useCallback(async () => {
-    return new Promise<{ lat: number; lng: number }>((resolve, reject) => {
-        if (!navigator.geolocation) {
-            reject("Geolocation not supported");
-            return;
-        }
-        navigator.geolocation.getCurrentPosition(
-            (pos) => {
-                const newLoc = { lat: pos.coords.latitude, lng: pos.coords.longitude };
-                updateCurrentUser({ location: newLoc });
-                resolve(newLoc);
-            },
-            (err) => reject(err),
-            { enableHighAccuracy: true, timeout: 5000 }
-        );
-    });
-  }, [updateCurrentUser]);
-
-  const logout = useCallback(() => {
-    localStorage.removeItem('elite_session');
-    setIsLoggedIn(false);
-    window.location.reload();
-  }, []);
-
   const value = useMemo(() => ({
     isLoggedIn, isProfileComplete, users, messages, bookings, currentUser, moodboards,
-    login, register, logout, 
+    login: async (email: string) => {
+        const found = users.find(u => u.email === email);
+        if (found || email === "test@elite.com") {
+          setCurrentUser(found || { ...CURRENT_USER });
+          setIsLoggedIn(true);
+          setProfileComplete(true);
+          return true;
+        }
+        return false;
+    },
+    register: async (name: string, email: string, types: UserType[]) => {
+        setCurrentUser({ ...CURRENT_USER, id: Date.now(), name, email, types });
+        setIsLoggedIn(true);
+        setProfileComplete(false);
+    },
+    logout: () => {
+        localStorage.removeItem('elite_session');
+        window.location.reload();
+    },
     completeInitialSetup: (data: any) => {
         setCurrentUser(prev => ({ ...prev, ...data, isPro: true }));
         setProfileComplete(true);
         return { startTour: true };
     },
-    completeProOnboarding,
-    updateCurrentUser, saveProfile, 
+    completeProOnboarding, updateCurrentUser, saveProfile,
     startChat: (userId: number) => {
         const existing = messages.find(t => t.participantId === userId);
         if (existing) return existing.id;
         const tid = Date.now();
         setMessages(prev => [{ id: tid, participantId: userId, messages: [], lastMessage: "", timestamp: "Maintenant", unread: false }, ...prev]);
         return tid;
-    }, addMessage: (threadId: number, text: string) => {
+    },
+    addMessage: (threadId: number, text: string) => {
         const msg = { id: Date.now(), senderId: currentUser.id, text, timestamp: new Date().toLocaleTimeString() };
         setMessages(prev => prev.map(t => t.id === threadId ? { ...t, messages: [...t.messages, msg], lastMessage: text, timestamp: "Maintenant" } : t));
     },
     confirmBooking: (details: any) => {
         const newB: Booking = { id: Date.now(), clientId: currentUser.id, status: 'Pending', escrowStatus: 'held', ...details };
         setBookings(prev => [newB, ...prev]);
-    }, updateBookingStatus: (id: number, status: any) => {
+    },
+    updateBookingStatus: (id: number, status: any) => {
         setBookings(prev => prev.map(b => b.id === id ? { ...b, status } : b));
-    }, postReview, refreshLocation, updateMoodboard, trackAction: (a: string, d: any) => console.log(a, d)
-  }), [isLoggedIn, isProfileComplete, users, messages, bookings, currentUser, moodboards, postReview, refreshLocation, updateMoodboard, completeProOnboarding, saveProfile]);
+    },
+    postReview, 
+    refreshLocation: async () => ({ lat: 48.8566, lng: 2.3522 }), 
+    updateMoodboard: (bid: string, items: any) => setMoodboards(prev => ({ ...prev, [bid]: items })),
+    trackAction: (a: string, d: any) => console.log(a, d)
+  }), [isLoggedIn, isProfileComplete, users, messages, bookings, currentUser, moodboards, postReview, completeProOnboarding, saveProfile]);
 
   return <UserContext.Provider value={value}>{children}</UserContext.Provider>;
 };
