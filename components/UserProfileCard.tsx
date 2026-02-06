@@ -44,9 +44,9 @@ const UserProfileCard: React.FC<UserProfileCardProps> = ({ user, onSelect }) => 
                     {type}
                 </div>
             ))}
-            {user.isAvailableNow && (
-                <div className="px-3 py-1 bg-red-600 text-white text-[8px] font-black rounded-lg uppercase tracking-widest animate-pulse shadow-lg">
-                    Live
+            {user.completedShootsCount > 0 && (
+                <div className="px-3 py-1 bg-white/10 backdrop-blur-md text-white text-[8px] font-black rounded-lg uppercase tracking-widest border border-white/10 shadow-lg">
+                    {user.completedShootsCount} Shoots
                 </div>
             )}
         </div>
@@ -60,7 +60,7 @@ const UserProfileCard: React.FC<UserProfileCardProps> = ({ user, onSelect }) => 
       <div className="p-5 flex items-center justify-between">
         <div className="flex items-center gap-1.5">
           <Icon name="star" className="w-4 h-4 text-[#D2B48C] fill-current" />
-          <span className="text-xs font-black text-white">{user.rating > 0 ? user.rating.toFixed(1) : 'NEW'}</span>
+          <span className="text-xs font-black text-white">{user.rating > 0 ? user.rating.toFixed(1) : 'NOUVEAU'}</span>
         </div>
         <div className="text-right">
             <p className="text-lg font-black text-[#D2B48C] tracking-tighter">${user.rate}<span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">/h</span></p>

@@ -15,7 +15,8 @@ export const CURRENT_USER: User = {
     rate: 0,
     isPro: false,
     isPremium: false,
-    email: 'test@elite.com'
+    email: 'test@elite.com',
+    completedShootsCount: 0
 };
 
 export const MOCK_USERS: User[] = [
@@ -36,7 +37,8 @@ export const MOCK_USERS: User[] = [
         rate: 150,
         isPro: true,
         isPremium: true,
-        isAvailableNow: true
+        isAvailableNow: true,
+        completedShootsCount: 42
     },
     {
         id: 2,
@@ -53,7 +55,8 @@ export const MOCK_USERS: User[] = [
         bio: "Réalisateur passionné par les projets narratifs complexes. Je transforme vos visions en contenu cinématique.",
         rate: 300,
         isPro: true,
-        isAvailableNow: false
+        isAvailableNow: false,
+        completedShootsCount: 15
     }
 ];
 

@@ -11,6 +11,7 @@ export type EscrowStatus = 'none' | 'held' | 'released' | 'refunded';
 export interface Review {
   id: number;
   authorId: number;
+  authorName: string;
   rating: number;
   comment: string;
   timestamp: string;
@@ -28,22 +29,6 @@ export interface MoodboardItem {
   addedBy: string;
   comment: string;
   timestamp: number;
-}
-
-export interface PaymentMethod {
-  id: string;
-  type: 'visa' | 'mastercard';
-  last4: string;
-  expiry: string;
-  isDefault: boolean;
-}
-
-export interface Transaction {
-  id: number | string;
-  type: 'expense' | 'income';
-  description: string;
-  date: string;
-  amount: number;
 }
 
 export interface User {
@@ -66,7 +51,8 @@ export interface User {
   socialLinks?: { website?: string; instagram?: string; };
   isPremium?: boolean;
   reviews?: Review[];
-  availableDays?: string[]; // Ex: ["Lundi", "Mardi"]
+  availableDays?: string[];
+  completedShootsCount: number;
 }
 
 export interface Booking {
@@ -85,15 +71,15 @@ export interface Booking {
     reviewSubmitted?: boolean;
 }
 
+export interface AISuggestion {
+  userId: number;
+  justification: string;
+}
+
 export interface QuizQuestion {
   question: string;
   options: string[];
   correctAnswerIndex: number;
-}
-
-export interface AISuggestion {
-  userId: number;
-  justification: string;
 }
 
 export interface ChatMessage {
@@ -110,4 +96,20 @@ export interface MessageThread {
   lastMessage: string;
   timestamp: string;
   unread: boolean;
+}
+
+export interface PaymentMethod {
+  id: string;
+  type: 'visa' | 'mastercard';
+  last4: string;
+  expiry: string;
+  isDefault: boolean;
+}
+
+export interface Transaction {
+  id: string;
+  type: 'expense' | 'income';
+  amount: number;
+  description: string;
+  date: string;
 }

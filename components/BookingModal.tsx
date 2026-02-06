@@ -110,19 +110,19 @@ const BookingModal: React.FC<BookingModalProps> = ({ user }) => {
 
             <div>
                 <h3 className="text-sm font-black text-white uppercase tracking-widest mb-4 flex justify-between">
-                    <span>Durée du shooting</span>
+                    <span>Céneau horaire (Durée)</span>
                     <span className="text-[#D2B48C]">{duration}h</span>
                 </h3>
                 <div className="flex items-center gap-4">
-                    <button onClick={() => setDuration(Math.max(1, duration - 1))} className="w-12 h-12 rounded-xl bg-gray-800 border border-gray-700 flex items-center justify-center text-white font-black text-xl">-</button>
-                    <div className="flex-1 h-2 bg-gray-800 rounded-full relative">
-                        <div className="absolute h-full bg-[#D2B48C] rounded-full" style={{ width: `${(duration / 8) * 100}%` }}></div>
+                    <button onClick={() => setDuration(Math.max(1, duration - 1))} className="w-14 h-14 rounded-2xl bg-[#1A2536] border border-white/10 flex items-center justify-center text-white font-black text-2xl active:scale-90 transition-all">-</button>
+                    <div className="flex-1 h-3 bg-[#1A2536] rounded-full relative overflow-hidden">
+                        <div className="absolute h-full bg-[#D2B48C] transition-all duration-300" style={{ width: `${(duration / 8) * 100}%` }}></div>
                     </div>
-                    <button onClick={() => setDuration(Math.min(8, duration + 1))} className="w-12 h-12 rounded-xl bg-gray-800 border border-gray-700 flex items-center justify-center text-white font-black text-xl">+</button>
+                    <button onClick={() => setDuration(Math.min(8, duration + 1))} className="w-14 h-14 rounded-2xl bg-[#1A2536] border border-white/10 flex items-center justify-center text-white font-black text-2xl active:scale-90 transition-all">+</button>
                 </div>
                 <div className="flex justify-between mt-6 pt-6 border-t border-white/5">
-                    <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">Estimation</p>
-                    <p className="text-2xl font-black text-white">${user.rate * duration}</p>
+                    <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">Tarif Total Estimé</p>
+                    <p className="text-2xl font-black text-white">${(user.rate * duration).toFixed(0)}</p>
                 </div>
             </div>
 
