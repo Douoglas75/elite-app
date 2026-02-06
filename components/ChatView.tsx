@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import type { MessageThread, User } from '../types';
 import { generateChatSuggestion } from '../services/geminiService';
@@ -39,7 +38,8 @@ const ChatView: React.FC<ChatViewProps> = ({ thread, otherUser, onBack }) => {
     if (isSuggesting) return;
     setIsSuggesting(true);
     try {
-        const generatedSuggestions = await generateChatSuggestion(currentUser.type, otherUser.type);
+        // Fix: Use 'types' array joined by slash instead of non-existent 'type' property
+        const generatedSuggestions = await generateChatSuggestion(currentUser.types.join('/'), otherUser.types.join('/'));
         setSuggestions(generatedSuggestions);
     } catch (e) {
         console.error(e);

@@ -5,7 +5,7 @@ import { User, UserType, MessageThread, Booking, PaymentMethod, Transaction } fr
 export const CURRENT_USER: User = {
     id: 999,
     name: 'Utilisateur Test',
-    type: UserType.Model,
+    types: [UserType.Model],
     avatarUrl: 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?auto=format&fit=crop&w=256&q=80',
     location: { lat: 48.8566, lng: 2.3522 },
     headline: 'Explorateur Créatif',
@@ -23,7 +23,7 @@ export const MOCK_USERS: User[] = [
         id: 1,
         name: 'Élise Vallet',
         email: 'elise@elite.com',
-        type: UserType.Photographer,
+        types: [UserType.Photographer],
         avatarUrl: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=256&q=80',
         location: { lat: 48.8606, lng: 2.3376 },
         headline: 'Portraitiste Expert - Mode & Editorial',
@@ -42,7 +42,7 @@ export const MOCK_USERS: User[] = [
         id: 2,
         name: 'Marc Lefebvre',
         email: 'marc@elite.com',
-        type: UserType.Videographer,
+        types: [UserType.Videographer, UserType.Photographer],
         avatarUrl: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=256&q=80',
         location: { lat: 48.8529, lng: 2.3499 },
         headline: 'Réalisateur - Storytelling Visuel',
@@ -89,7 +89,6 @@ export const ICONS = {
     locationMarker: <path d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />,
     link: <path d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101" />,
     instagram: <path d="M7 2h10a5 5 0 015 5v10a5 5 0 01-5 5H7a5 5 0 01-5-5V7a5 5 0 015-5zm0 2a3 3 0 00-3 3v10a3 3 0 003 3h10a3 3 0 003-3V7a3 3 0 00-3-3H7zm5 3a5 5 0 110 10 5 5 0 010-10zm0 2a3 3 0 100 6 3 3 0 000-6zm4.75-.75a.75.75 0 100 1.5.75.75 0 000-1.5z" />,
-    /* Added visa and mastercard brand icons to support payment views and resolve type overlap errors in Icon.tsx */
     visa: <g transform="scale(1.5)"><path fill="#1A1F71" d="M16 10H0V0h16v10z"/><path fill="#FFF" d="M6.1 7.6h1.1l.7-4.4H6.8L6.1 7.6zm3.3-4.4l-1 4.4h1l1-4.4h-1zm3.8 2.8c-.1-.7-.8-1.1-1.6-1.1-.8 0-1.4.3-1.4 1 0 .6.5.9 1 .1.2.1.4.2.4.4 0 .3-.3.5-.8.5-.5 0-.9-.2-1.1-.4l-.2.8c.3.2.9.4 1.4.4 1 0 1.7-.5 1.7-1.4.1-.4-.2-.8-.4-1.2zM2.9 3.2L1 6.5h1.1l.2-.5h1.3l.1.5h1L3.9 3.2H2.9zm.6 2.3l.4-1.1.2 1.1h-.6z"/></g>,
     mastercard: <g transform="scale(1)"><circle cx="7" cy="7" r="7" fill="#EB001B"/><circle cx="17" cy="7" r="7" fill="#F79E1B"/><path fill="#FF5F00" d="M12 11.6c1-1.1 1.6-2.5 1.6-4.1s-.6-3-1.6-4.1c-1 1.1-1.6 2.5-1.6 4.1s.6 3 1.6 4.1z"/></g>,
 };

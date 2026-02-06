@@ -11,7 +11,7 @@ const EditProfileScreen: React.FC = () => {
   const { setEditingProfile } = useAppContext();
   
   const [profilePicture, setProfilePicture] = useState<string | null>(currentUser.avatarUrl || null);
-  const [userType, setUserType] = useState<UserType>(currentUser.type);
+  const [selectedTypes, setSelectedTypes] = useState<UserType[]>(currentUser.types || [currentUser.types as any]);
   const [headline, setHeadline] = useState(currentUser.headline);
   const [bio, setBio] = useState(currentUser.bio);
   const [location, setLocation] = useState<{ lat: number; lng: number }>(currentUser.location);
@@ -26,6 +26,14 @@ const EditProfileScreen: React.FC = () => {
 
   const [isGenerating, setIsGenerating] = useState(false);
   const [suggestions, setSuggestions] = useState<{ headlines: string[], bio: string } | null>(null);
+
+  const toggleType = (type: UserType) => {
+    setSelectedTypes(prev => 
+      prev.includes(type) 
+        ? prev.filter(t => t !== type) 
+        : [...prev, type]
+    );
+  };
 
   const handlePictureUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -58,11 +66,15 @@ const EditProfileScreen: React.FC = () => {
   };
 
   const handleGenerateAIProfile = async () => {
+    if (selectedTypes.length === 0) {
+      setError("Veuillez sélectionner au moins une spécialité.");
+      return;
+    }
     setIsGenerating(true);
     setSuggestions(null);
     setError('');
     try {
-      const result = await generateProfileSuggestions(userType);
+      const result = await generateProfileSuggestions(selectedTypes.join(', '));
       setSuggestions(result);
     } catch (e) {
       setError("Erreur lors de la génération IA. Veuillez réessayer.");
@@ -74,6 +86,10 @@ const EditProfileScreen: React.FC = () => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (selectedTypes.length === 0) {
+      setError("Veuillez sélectionner au moins une spécialité.");
+      return;
+    }
     if (!headline.trim() || !bio.trim()) {
       setError('Le titre et la biographie ne peuvent pas être vides.');
       return;
@@ -82,7 +98,7 @@ const EditProfileScreen: React.FC = () => {
     const updatedUser: User = {
       ...currentUser,
       avatarUrl: profilePicture || '',
-      type: userType,
+      types: selectedTypes,
       headline,
       bio,
       location,
@@ -137,18 +153,21 @@ const EditProfileScreen: React.FC = () => {
             </div>
 
             <div>
-              <label className="block text-xs font-black text-slate-500 uppercase tracking-widest mb-3 text-center">Spécialité Pro</label>
+              <label className="block text-xs font-black text-slate-500 uppercase tracking-widest mb-3 text-center">Spécialités Pro (plusieurs choix possibles)</label>
               <div className="grid grid-cols-3 gap-2">
-                {[UserType.Model, UserType.Photographer, UserType.Videographer].map((type) => (
-                  <button
-                    key={type}
-                    type="button"
-                    onClick={() => setUserType(type)}
-                    className={`py-3 px-1 rounded-xl border-2 text-[10px] font-black uppercase tracking-tighter transition-all ${userType === type ? 'bg-cyan-600/20 border-cyan-500 text-cyan-400' : 'bg-gray-800 border-gray-700 text-gray-400 hover:border-gray-600'}`}
-                  >
-                    {type}
-                  </button>
-                ))}
+                {[UserType.Model, UserType.Photographer, UserType.Videographer].map((type) => {
+                  const isSelected = selectedTypes.includes(type);
+                  return (
+                    <button
+                      key={type}
+                      type="button"
+                      onClick={() => toggleType(type)}
+                      className={`py-3 px-1 rounded-xl border-2 text-[10px] font-black uppercase tracking-tighter transition-all ${isSelected ? 'bg-cyan-600/20 border-cyan-500 text-cyan-400' : 'bg-gray-800 border-gray-700 text-gray-400 hover:border-gray-600'}`}
+                    >
+                      {type}
+                    </button>
+                  );
+                })}
               </div>
             </div>
             
@@ -168,7 +187,7 @@ const EditProfileScreen: React.FC = () => {
                     <Icon name="sparkles" className="w-6 h-6 text-purple-400" />
                     <h4 className="font-semibold text-white">Assistant de Profil IA</h4>
                 </div>
-                <p className="text-[11px] text-purple-300/80">Besoin d'aide ? Notre IA peut générer un titre et une bio en fonction de votre spécialité : <strong>{userType}</strong>.</p>
+                <p className="text-[11px] text-purple-300/80">Besoin d'aide ? Notre IA peut générer un titre et une bio en fonction de vos spécialités sélectionnés.</p>
                 <button
                     type="button"
                     onClick={handleGenerateAIProfile}

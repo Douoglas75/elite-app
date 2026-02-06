@@ -10,10 +10,18 @@ const InitialSetupScreen: React.FC = () => {
   const { completeInitialSetup, updateCurrentUser } = useUser();
   const { setTourActive } = useAppContext();
   const [name, setName] = useState('');
-  const [userType, setUserType] = useState<UserType | null>(null);
+  const [selectedTypes, setSelectedTypes] = useState<UserType[]>([]);
   const [objective, setObjective] = useState<string | null>(null);
   const [avatar, setAvatar] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const toggleType = (type: UserType) => {
+    setSelectedTypes(prev => 
+      prev.includes(type) 
+        ? prev.filter(t => t !== type) 
+        : [...prev, type]
+    );
+  };
 
   const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -26,8 +34,8 @@ const InitialSetupScreen: React.FC = () => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (name.trim() && userType && objective) {
-      const { startTour } = completeInitialSetup({ name: name.trim(), type: userType });
+    if (name.trim() && selectedTypes.length > 0 && objective) {
+      const { startTour } = completeInitialSetup({ name: name.trim(), types: selectedTypes });
       if (avatar) {
         updateCurrentUser({ avatarUrl: avatar });
       }
@@ -37,17 +45,20 @@ const InitialSetupScreen: React.FC = () => {
     }
   };
 
-  const isFormValid = !!name.trim() && !!userType && !!objective;
+  const isFormValid = !!name.trim() && selectedTypes.length > 0 && !!objective;
 
-  const TypeButton: React.FC<{ type: UserType }> = ({ type }) => (
-    <button
-      type="button"
-      onClick={() => setUserType(type)}
-      className={`w-full py-4 px-2 rounded-lg border-2 transition-all duration-200 flex items-center justify-center ${userType === type ? 'bg-cyan-500/20 border-cyan-500' : 'bg-gray-800 border-gray-700 hover:border-cyan-600'}`}
-    >
-      <p className={`font-semibold ${userType === type ? 'text-cyan-400' : 'text-white'}`}>{type}</p>
-    </button>
-  );
+  const TypeButton: React.FC<{ type: UserType }> = ({ type }) => {
+    const isSelected = selectedTypes.includes(type);
+    return (
+      <button
+        type="button"
+        onClick={() => toggleType(type)}
+        className={`w-full py-4 px-2 rounded-lg border-2 transition-all duration-200 flex items-center justify-center ${isSelected ? 'bg-cyan-500/20 border-cyan-500' : 'bg-gray-800 border-gray-700 hover:border-cyan-600'}`}
+      >
+        <p className={`font-semibold ${isSelected ? 'text-cyan-400' : 'text-white'}`}>{type}</p>
+      </button>
+    );
+  };
 
   const ObjectiveButton: React.FC<{ value: string }> = ({ value }) => (
     <button
@@ -106,7 +117,7 @@ const InitialSetupScreen: React.FC = () => {
             </div>
             
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-3 text-center">Vous êtes...</label>
+              <label className="block text-sm font-medium text-gray-300 mb-3 text-center">Vous êtes... (plusieurs choix possibles)</label>
               <div className="grid grid-cols-3 gap-3 text-center">
                 <TypeButton type={UserType.Model} />
                 <TypeButton type={UserType.Photographer} />

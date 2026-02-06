@@ -85,21 +85,26 @@ const MapView: React.FC<MapViewProps> = ({ filteredUsers }) => {
 
       const isMe = user.id === currentUser.id;
       
-      // Détermination du label et de la couleur en fonction du type précis
-      let typeLabel = 'MD';
+      // Determine badges to show
+      const badges: string[] = [];
+      if (user.types?.includes(UserType.Photographer)) badges.push('PH');
+      if (user.types?.includes(UserType.Videographer)) badges.push('VD');
+      if (user.types?.includes(UserType.Model)) badges.push('MD');
+
+      // Colors based on roles - fallback to Elite gold if multiple
       let colorClass = 'border-white';
       let bgClass = 'bg-white';
-
-      if (user.type === UserType.Photographer) {
-          typeLabel = 'PH';
+      
+      if (badges.length > 1) {
           colorClass = 'border-[#D2B48C]';
           bgClass = 'bg-[#D2B48C]';
-      } else if (user.type === UserType.Videographer) {
-          typeLabel = 'VD';
+      } else if (user.types?.includes(UserType.Photographer)) {
+          colorClass = 'border-[#D2B48C]';
+          bgClass = 'bg-[#D2B48C]';
+      } else if (user.types?.includes(UserType.Videographer)) {
           colorClass = 'border-purple-500';
           bgClass = 'bg-purple-500';
-      } else if (user.type === UserType.Model) {
-          typeLabel = 'MD';
+      } else if (user.types?.includes(UserType.Model)) {
           colorClass = 'border-pink-500';
           bgClass = 'bg-pink-500';
       }
@@ -109,6 +114,12 @@ const MapView: React.FC<MapViewProps> = ({ filteredUsers }) => {
           bgClass = 'bg-blue-500';
       }
 
+      const badgesHtml = badges.map((b, i) => `
+        <div class="absolute -bottom-1 right-${i * 3} w-4 h-4 ${bgClass} rounded-lg flex items-center justify-center border border-[#0D1625] shadow-md z-${10 - i}">
+            <div class="text-[6px] font-black text-[#0D1625] uppercase">${isMe && i === 0 ? 'ME' : b}</div>
+        </div>
+      `).join('');
+
       const icon = L.divIcon({
         html: `<div class="relative ${isMe ? 'z-[5000]' : ''} animate-scale-in">
                  ${isMe ? `<div class="absolute -inset-4 bg-blue-500/20 rounded-full animate-ping"></div>` : ''}
@@ -116,9 +127,7 @@ const MapView: React.FC<MapViewProps> = ({ filteredUsers }) => {
                  <div class="w-10 h-10 rounded-2xl border-2 ${colorClass} bg-[#0D1625] overflow-hidden shadow-2xl transition-all ${isMe ? 'ring-4 ring-blue-500/30' : ''}">
                    <img src="${user.avatarUrl}" class="w-full h-full object-cover" />
                  </div>
-                 <div class="absolute -bottom-1 -right-1 w-4 h-4 ${bgClass} rounded-lg flex items-center justify-center border border-[#0D1625] shadow-md">
-                    <div class="text-[7px] font-black text-[#0D1625] uppercase">${isMe ? 'ME' : typeLabel}</div>
-                 </div>
+                 ${badgesHtml}
                </div>`,
         className: '', iconSize: [40, 40], iconAnchor: [20, 20]
       });

@@ -20,7 +20,8 @@ const NotificationPopup: React.FC<NotificationPopupProps> = ({ user, onClose, on
         <div className="flex-1">
           <p className="text-sm text-purple-400 font-semibold">Alerte d'utilisateur à proximité</p>
           <p className="font-bold text-white mt-1">
-            {user.name} <span className="font-normal text-gray-400">({user.type}) est à proximité !</span>
+            {/* Fix: User object uses 'types' array instead of 'type' */}
+            {user.name} <span className="font-normal text-gray-400">({user.types.join(', ')}) est à proximité !</span>
           </p>
           <div className="flex gap-2 mt-3">
             <button

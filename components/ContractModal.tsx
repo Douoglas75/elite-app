@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import type { Booking, User } from '../types';
 import Icon from './Icon';
@@ -25,7 +24,8 @@ const ContractModal: React.FC<ContractModalProps> = ({ booking }) => {
   useEffect(() => {
     const fetchClauses = async () => {
       if (professional) {
-        const result = await generateContractClauses(professional.type, client.type);
+        // Fix: Use 'types' array joined by slash instead of non-existent 'type' property
+        const result = await generateContractClauses(professional.types.join('/'), client.types.join('/'));
         setClauses(result.clauses);
         setIsLoading(false);
       }

@@ -130,7 +130,8 @@ export const getAICollaborationSuggestions = async (currentUser: User, viewedUse
   try {
     const response = await ai.models.generateContent({
       model: "gemini-3-pro-preview",
-      contents: `Pourquoi un ${currentUser.type} et un ${viewedUser.type} devraient collaborer ?`,
+      // Fix: User type has 'types' (array) instead of 'type'
+      contents: `Pourquoi un ${currentUser.types.join('/')} et un ${viewedUser.types.join('/')} devraient collaborer ?`,
       config: {
         responseMimeType: "application/json",
         responseSchema: {

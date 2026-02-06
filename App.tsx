@@ -56,7 +56,8 @@ const App: React.FC = () => {
 
   const filteredUsers = useMemo(() => {
     return users.filter(user => {
-      const matchesType = filterType === 'All' || user.type === filterType;
+      // Logic for multi-type: check if the user has the filtered type in their types array
+      const matchesType = filterType === 'All' || (user.types && user.types.includes(filterType as UserType));
       const matchesAvailability = !filterAvailable || user.isAvailableNow;
       const matchesSearch = searchQuery.trim() === '' || 
         user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||

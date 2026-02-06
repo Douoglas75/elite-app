@@ -13,9 +13,9 @@ interface UserContextType {
   moodboards: Record<string, MoodboardItem[]>;
   
   login: (email: string, pass: string) => Promise<boolean>;
-  register: (name: string, email: string, type: UserType) => Promise<void>;
+  register: (name: string, email: string, types: UserType[]) => Promise<void>;
   logout: () => void;
-  completeInitialSetup: (data: { name: string; type: UserType }) => { startTour: boolean };
+  completeInitialSetup: (data: { name: string; types: UserType[] }) => { startTour: boolean };
   completeProOnboarding: () => void;
   updateCurrentUser: (updatedData: Partial<User>) => void;
   saveProfile: (updatedUser: User) => void;
@@ -65,7 +65,6 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [bookings, setBookings] = useState<Booking[]>(() => storage.get('elite_db_bookings', MOCK_BOOKINGS));
   const [moodboards, setMoodboards] = useState<Record<string, MoodboardItem[]>>(() => storage.get('elite_db_moodboards', {}));
 
-  // Synchronisation forcée : dès que currentUser change (portfolio, type, bio...), on met à jour la DB locale
   useEffect(() => {
     storage.set('elite_active_user', currentUser);
     setUsers(prev => {
@@ -77,7 +76,6 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     });
   }, [currentUser]);
 
-  // Persistance globale de la liste d'utilisateurs et autres états
   useEffect(() => {
     storage.set('elite_db_users', users);
     storage.set('elite_db_msgs', messages);
@@ -125,14 +123,14 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     return false;
   }, [users]);
 
-  const register = useCallback(async (name: string, email: string, type: UserType) => {
-    const newUser = { ...CURRENT_USER, id: Date.now(), name, email, type };
+  const register = useCallback(async (name: string, email: string, types: UserType[]) => {
+    const newUser = { ...CURRENT_USER, id: Date.now(), name, email, types };
     setCurrentUser(newUser);
     setIsLoggedIn(true);
     setProfileComplete(false);
   }, []);
 
-  const completeInitialSetup = useCallback((data: { name: string; type: UserType }) => {
+  const completeInitialSetup = useCallback((data: { name: string; types: UserType[] }) => {
     const updated = { ...currentUser, ...data, isPro: true };
     setCurrentUser(updated);
     setProfileComplete(true);

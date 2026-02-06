@@ -1,3 +1,4 @@
+
 import React from 'react';
 import type { User } from '../types';
 import Icon from './Icon';
@@ -58,9 +59,14 @@ const ProfileDetail: React.FC<ProfileDetailProps> = ({ user, onBack }) => {
                   className="rounded-[2.5rem] w-full aspect-square object-cover shadow-2xl border border-white/5 cursor-pointer" 
                   onClick={() => setFullScreenMedia({ type: 'image', url: user.avatarUrl })}
                 />
-                <div className="absolute top-4 left-4 flex gap-2">
-                    {user.isPro && <div className="px-3 py-1 bg-[#D2B48C] text-[#050B14] text-[8px] font-black rounded-lg uppercase tracking-widest">PRO</div>}
-                    {user.isPremium && <div className="px-3 py-1 bg-white/10 backdrop-blur-md text-white text-[8px] font-black rounded-lg uppercase tracking-widest border border-white/10">PREMIUM</div>}
+                <div className="absolute top-4 left-4 flex flex-wrap gap-2 max-w-[90%]">
+                    {user.types?.map((type, i) => (
+                        <div key={i} className="px-3 py-1 bg-[#D2B48C] text-[#050B14] text-[8px] font-black rounded-lg uppercase tracking-widest shadow-xl">
+                            {type}
+                        </div>
+                    ))}
+                    {user.isPro && <div className="px-3 py-1 bg-white/10 backdrop-blur-md text-white text-[8px] font-black rounded-lg uppercase tracking-widest border border-white/10 shadow-xl">PRO</div>}
+                    {user.isPremium && <div className="px-3 py-1 bg-purple-600/20 backdrop-blur-md text-white text-[8px] font-black rounded-lg uppercase tracking-widest border border-purple-500/10 shadow-xl">PREMIUM</div>}
                 </div>
               </div>
 

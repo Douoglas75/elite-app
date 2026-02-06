@@ -1,3 +1,4 @@
+
 import React, { memo } from 'react';
 import type { User } from '../types';
 import { UserType } from '../types';
@@ -37,12 +38,14 @@ const UserProfileCard: React.FC<UserProfileCardProps> = ({ user, onSelect }) => 
             <Icon name="heart" className={`w-5 h-5 transition-colors ${isUserFavorite ? 'text-red-500 fill-current' : 'text-white'}`} />
         </button>
 
-        <div className="absolute top-4 left-4 flex gap-1.5">
-            <div className="px-3 py-1 bg-[#D2B48C] text-[#050B14] text-[8px] font-black rounded-lg uppercase tracking-widest">
-                {user.type}
-            </div>
+        <div className="absolute top-4 left-4 flex flex-wrap gap-1.5 max-w-[80%]">
+            {user.types?.map((type, i) => (
+                <div key={i} className="px-3 py-1 bg-[#D2B48C] text-[#050B14] text-[8px] font-black rounded-lg uppercase tracking-widest shadow-lg">
+                    {type}
+                </div>
+            ))}
             {user.isAvailableNow && (
-                <div className="px-3 py-1 bg-red-600 text-white text-[8px] font-black rounded-lg uppercase tracking-widest animate-pulse">
+                <div className="px-3 py-1 bg-red-600 text-white text-[8px] font-black rounded-lg uppercase tracking-widest animate-pulse shadow-lg">
                     Live
                 </div>
             )}
