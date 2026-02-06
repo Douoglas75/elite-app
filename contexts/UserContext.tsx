@@ -24,7 +24,7 @@ interface UserContextType {
   confirmBooking: (details: any) => void;
   updateBookingStatus: (id: number, status: any) => void;
   postReview: (booking: Booking, review: any) => void;
-  refreshLocation: () => Promise<void>;
+  refreshLocation: () => Promise<{ lat: number; lng: number }>;
   updateMoodboard: (bookingId: string, items: MoodboardItem[]) => void;
   trackAction: (action: string, data?: any) => void;
 }
@@ -44,7 +44,6 @@ const storage = {
             localStorage.setItem(key, JSON.stringify(value));
         } catch (e) {
             console.warn("Storage quota exceeded, cleaning old entries...");
-            // Simple cleanup logic if needed
         }
     }
 };
@@ -88,7 +87,7 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   }, []);
 
   const refreshLocation = useCallback(async () => {
-    return new Promise<void>((resolve, reject) => {
+    return new Promise<{ lat: number; lng: number }>((resolve, reject) => {
         if (!navigator.geolocation) {
             reject("Geolocation not supported");
             return;
@@ -97,7 +96,7 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             (pos) => {
                 const newLoc = { lat: pos.coords.latitude, lng: pos.coords.longitude };
                 updateCurrentUser({ location: newLoc });
-                resolve();
+                resolve(newLoc);
             },
             (err) => reject(err),
             { enableHighAccuracy: true, timeout: 5000 }

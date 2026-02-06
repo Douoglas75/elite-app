@@ -105,9 +105,9 @@ const MapView: React.FC<MapViewProps> = ({ filteredUsers }) => {
     if (isLocating) return;
     setIsLocating(true);
     try {
-        await refreshLocation();
+        const newCoords = await refreshLocation();
         if (mapInstanceRef.current) {
-            mapInstanceRef.current.flyTo([currentUser.location.lat, currentUser.location.lng], 15, { duration: 1.5 });
+            mapInstanceRef.current.flyTo([newCoords.lat, newCoords.lng], 15, { duration: 1.5 });
         }
     } catch (err) {
         alert("Activez la géolocalisation dans vos paramètres système pour cette fonctionnalité.");

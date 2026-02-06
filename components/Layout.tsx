@@ -62,3 +62,21 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
             <div className="flex-1 flex flex-col relative overflow-hidden h-full z-0">
                 <main className={`flex-1 overflow-hidden relative h-full ${showNavBar ? 'pb-[84px] md:pb-0' : ''}`}>
                     {children}
+                </main>
+                
+                {/* Mobile Bottom Nav */}
+                {showNavBar && (
+                    <nav className="fixed bottom-0 left-0 right-0 bg-[#0D1625]/95 backdrop-blur-3xl border-t border-white/5 h-[84px] pb-[env(safe-area-inset-bottom)] px-2 z-[900] md:hidden flex justify-around items-center shadow-[0_-10px_40px_rgba(0,0,0,0.5)]">
+                        <BottomNavItem tab="discover" icon="search" label="Explorer" />
+                        <BottomNavItem tab="favorites" icon="heart" label="Favoris" />
+                        <BottomNavItem tab="messages" icon="message" label="Chats" />
+                        <BottomNavItem tab="bookings" icon="calendar" label="Séances" />
+                        <BottomNavItem tab="profile" icon="user" label="Profil" />
+                    </nav>
+                )}
+            </div>
+        </div>
+    );
+};
+
+export default Layout;

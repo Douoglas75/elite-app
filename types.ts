@@ -30,6 +30,23 @@ export interface MoodboardItem {
   timestamp: number;
 }
 
+/* Added PaymentMethod and Transaction interfaces to fix export errors in constants.tsx and PaymentScreen.tsx */
+export interface PaymentMethod {
+  id: string;
+  type: 'visa' | 'mastercard';
+  last4: string;
+  expiry: string;
+  isDefault: boolean;
+}
+
+export interface Transaction {
+  id: number | string;
+  type: 'expense' | 'income';
+  description: string;
+  date: string;
+  amount: number;
+}
+
 export interface User {
   id: number;
   name: string;

@@ -1,15 +1,11 @@
+
 import React, { useState, useRef } from 'react';
 import Icon from './Icon';
 import { useUser } from '../contexts/UserContext';
 import { useAppContext } from '../contexts/AppContext';
 import { generateVisualInspiration } from '../services/geminiService';
-
-interface MoodboardItem {
-  id: string;
-  url: string;
-  addedBy: string;
-  comment: string;
-}
+/* Import MoodboardItem from types to resolve conflict with local interface and fix type mismatch errors */
+import type { MoodboardItem } from '../types';
 
 const MoodboardView: React.FC<{ bookingId: number }> = ({ bookingId }) => {
   const { currentUser, moodboards, updateMoodboard, trackAction } = useUser();
@@ -18,12 +14,14 @@ const MoodboardView: React.FC<{ bookingId: number }> = ({ bookingId }) => {
   
   // On récupère les items depuis le store global
   const bidStr = bookingId.toString();
+  /* Fix: Added missing timestamp to initial fallback items to match MoodboardItem interface */
   const items = moodboards[bidStr] || [
     { 
       id: '1', 
       url: 'https://images.unsplash.com/photo-1511367461989-f85a21fda167?auto=format&fit=crop&w=800&q=80', 
       addedBy: 'Système', 
-      comment: 'Inspiration : Direction artistique Minimaliste' 
+      comment: 'Inspiration : Direction artistique Minimaliste',
+      timestamp: Date.now()
     }
   ];
 
@@ -36,11 +34,13 @@ const MoodboardView: React.FC<{ bookingId: number }> = ({ bookingId }) => {
     if (file) {
       const reader = new FileReader();
       reader.onload = (event) => {
+        /* Fix: Added missing timestamp property to newItem to satisfy the MoodboardItem interface */
         const newItem: MoodboardItem = {
           id: Date.now().toString(),
           url: event.target?.result as string,
           addedBy: currentUser.name,
-          comment: 'Nouvelle inspiration...'
+          comment: 'Nouvelle inspiration...',
+          timestamp: Date.now()
         };
         updateMoodboard(bidStr, [newItem, ...items]);
         trackAction('MOODBOARD_ADD_ITEM', { bookingId, itemId: newItem.id });
@@ -55,11 +55,13 @@ const MoodboardView: React.FC<{ bookingId: number }> = ({ bookingId }) => {
     try {
         const imageUrl = await generateVisualInspiration(aiPrompt);
         if (imageUrl) {
+            /* Fix: Added missing timestamp property to AI generated newItem */
             const newItem: MoodboardItem = {
                 id: Date.now().toString(),
                 url: imageUrl,
                 addedBy: 'Elite AI',
-                comment: `Généré pour : ${aiPrompt}`
+                comment: `Généré pour : ${aiPrompt}`,
+                timestamp: Date.now()
             };
             updateMoodboard(bidStr, [newItem, ...items]);
             setAiPrompt('');
