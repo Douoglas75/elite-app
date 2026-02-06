@@ -49,7 +49,7 @@ export interface Transaction {
 export interface User {
   id: number;
   name: string;
-  types: UserType[]; // Changed from 'type: UserType'
+  types: UserType[];
   avatarUrl: string;
   location: { lat: number; lng: number; };
   headline: string;
@@ -66,6 +66,7 @@ export interface User {
   socialLinks?: { website?: string; instagram?: string; };
   isPremium?: boolean;
   reviews?: Review[];
+  availableDays?: string[]; // Ex: ["Lundi", "Mardi"]
 }
 
 export interface Booking {

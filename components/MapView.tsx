@@ -96,3 +96,73 @@ const MapView: React.FC<MapViewProps> = ({ filteredUsers }) => {
       const badgesHtml = roleData.map((role, i) => `
         <div class="absolute -bottom-1 -right-${i * 3} w-4 h-4 ${role.color} rounded-lg flex items-center justify-center border border-[#0D1625] shadow-md z-${10 - i} transition-all">
             <div class="text-[6px] font-black text-white uppercase">${isMe && i === 0 ? 'ME' : role.label}</div>
+        </div>
+      `).join('');
+
+      const icon = L.divIcon({
+        html: `<div class="relative ${isMe ? 'z-[5000]' : ''} animate-scale-in">
+                 ${isMe ? `<div class="absolute -inset-4 bg-blue-500/20 rounded-full animate-ping"></div>` : ''}
+                 ${user.isAvailableNow ? `<div class="absolute -inset-2 ${isMe ? 'bg-blue-500/30' : 'bg-red-500/20'} rounded-full animate-pulse"></div>` : ''}
+                 <div class="w-10 h-10 rounded-2xl border-2 ${borderColor} bg-[#0D1625] overflow-hidden shadow-2xl transition-all ${isMe ? 'ring-4 ring-blue-500/30' : ''}">
+                   <img src="${user.avatarUrl}" class="w-full h-full object-cover" />
+                 </div>
+                 <div class="flex gap-[-4px]">
+                    ${badgesHtml}
+                 </div>
+               </div>`,
+        className: '', iconSize: [40, 40], iconAnchor: [20, 20]
+      });
+
+      const marker = L.marker([user.location.lat, user.location.lng], { 
+        icon, 
+        zIndexOffset: isMe ? 10000 : 0 
+      }).addTo(userLayer);
+
+      marker.on('mousedown touchstart', (e: any) => {
+          L.DomEvent.stopPropagation(e);
+          if (!isMe) viewProfile(user);
+      });
+    });
+  }, [displayUsers, currentUser, viewProfile]);
+
+  const handleLiveLocate = async () => {
+    if (isLocating) return;
+    setIsLocating(true);
+    try {
+        const newCoords = await refreshLocation();
+        if (mapInstanceRef.current) {
+            mapInstanceRef.current.flyTo([newCoords.lat, newCoords.lng], 15, { duration: 1.5 });
+        }
+    } catch (err) {
+        alert("Activez la géolocalisation dans vos paramètres système pour cette fonctionnalité.");
+    } finally {
+        setTimeout(() => setIsLocating(false), 2000);
+    }
+  };
+
+  return (
+    <div className="relative w-full h-full bg-[#050B14] overflow-hidden">
+      <div ref={mapContainerRef} className="w-full h-full z-0" />
+      
+      <div className="absolute inset-0 z-[500] pointer-events-none flex flex-col justify-between p-4 md:p-6 pb-24 md:pb-8">
+        <div className="flex justify-center">
+          <div className="bg-[#050B14]/90 backdrop-blur-xl p-1 rounded-2xl border border-white/10 shadow-2xl flex gap-1 pointer-events-auto">
+              <button onClick={() => setActiveLayer('users')} className={`px-6 py-2 rounded-xl text-[10px] font-black tracking-widest transition-all uppercase whitespace-nowrap ${activeLayer === 'users' ? 'bg-[#D2B48C] text-[#050B14]' : 'text-slate-400'}`}>TALENTS</button>
+              <button onClick={() => setActiveLayer('spots')} className={`px-6 py-2 rounded-xl text-[10px] font-black tracking-widest transition-all uppercase whitespace-nowrap ${activeLayer === 'spots' ? 'bg-[#D2B48C] text-[#050B14]' : 'text-slate-400'}`}>SPOTS</button>
+          </div>
+        </div>
+
+        <div className="flex justify-end items-end">
+            <button 
+              onClick={handleLiveLocate}
+              className={`w-14 h-14 rounded-2xl flex items-center justify-center shadow-2xl active:scale-90 transition-all pointer-events-auto ${isLocating ? 'bg-blue-500 text-white animate-pulse' : 'bg-white text-[#050B14]'}`}
+            >
+              <Icon name={isLocating ? "bolt" : "locationMarker"} className="w-7 h-7" />
+            </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default memo(MapView);

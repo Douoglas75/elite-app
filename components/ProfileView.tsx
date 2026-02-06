@@ -7,7 +7,7 @@ import { UserType, type PortfolioItem } from '../types';
 
 const ProfileView: React.FC = () => {
   const { currentUser: user, logout, updateCurrentUser } = useUser();
-  const { setEditingProfile, setActiveSubView, setFullScreenMedia } = useAppContext();
+  const { setEditingProfile, setActiveSubView, setFullScreenMedia, setActiveTab } = useAppContext();
   const mediaInputRef = useRef<HTMLInputElement>(null);
   const [isUploading, setIsUploading] = useState(false);
 
@@ -21,7 +21,6 @@ const ProfileView: React.FC = () => {
         ? currentRoles.filter(r => r !== role)
         : [...currentRoles, role];
     
-    // On force au moins un rôle
     if (newRoles.length === 0) return;
     updateCurrentUser({ types: newRoles });
   };
@@ -66,7 +65,7 @@ const ProfileView: React.FC = () => {
         updateCurrentUser({ portfolio: updatedPortfolio });
     } catch (err) {
         console.error("Upload Error:", err);
-        alert("Certains fichiers sont trop lourds pour le stockage local.");
+        alert("Certains fichiers sont trop lourds.");
     } finally {
         setIsUploading(false);
         if (mediaInputRef.current) mediaInputRef.current.value = '';
@@ -81,9 +80,12 @@ const ProfileView: React.FC = () => {
 
   return (
     <div className="flex flex-col h-full bg-[#050B14] pb-6 overflow-y-auto no-scrollbar animate-view-transition">
-      <header className="p-6 border-b border-white/5 flex justify-between items-center bg-[#050B14]/80 backdrop-blur-md sticky top-0 z-[100]">
-        <h1 className="text-2xl font-black text-white uppercase tracking-tighter">Mon Espace</h1>
-        <button onClick={logout} className="p-2 text-red-500 hover:bg-red-500/10 rounded-xl transition-all">
+      <header className="p-4 md:p-6 border-b border-white/5 flex items-center gap-4 bg-[#0D1625]/80 backdrop-blur-md sticky top-0 z-[100]">
+        <button onClick={() => setActiveTab('discover')} className="p-3 bg-white/5 hover:bg-white/10 rounded-xl text-[#D2B48C] transition-all">
+           <Icon name="chevronRight" className="w-5 h-5 rotate-180" />
+        </button>
+        <h1 className="flex-1 text-xl font-black text-white uppercase tracking-tighter">Mon Studio</h1>
+        <button onClick={logout} className="p-3 text-red-500 hover:bg-red-500/10 rounded-xl transition-all">
           <Icon name="close" />
         </button>
       </header>
@@ -91,22 +93,41 @@ const ProfileView: React.FC = () => {
       <div className="p-6 space-y-8 max-w-2xl mx-auto w-full">
         <div className="flex flex-col items-center text-center">
           <div className="relative group">
-            <img src={user.avatarUrl} className="w-28 h-28 rounded-3xl object-cover border-4 border-[#D2B48C]/20 shadow-2xl" alt="Profile" />
+            <img src={user.avatarUrl} className="w-28 h-28 rounded-[2.5rem] object-cover border-4 border-[#D2B48C]/20 shadow-2xl" alt="Profile" />
             {user.isPro && <div className="absolute -bottom-2 -right-2 bg-[#D2B48C] text-[#050B14] text-[10px] font-black px-3 py-1 rounded-lg border-4 border-[#050B14]">PRO</div>}
           </div>
           <h2 className="mt-4 text-2xl font-black text-white uppercase tracking-tight">{user.name}</h2>
-          <p className="text-slate-500 text-sm font-bold uppercase tracking-widest opacity-60">{user.headline}</p>
+          <div className="flex items-center gap-3 mt-2 bg-white/5 px-4 py-1.5 rounded-full border border-white/5">
+              <span className="text-[#D2B48C] font-black text-sm">${user.rate || 0}/h</span>
+              <span className="w-1 h-1 bg-gray-700 rounded-full"></span>
+              <span className="text-gray-500 text-[9px] font-black uppercase tracking-widest">{user.availableDays?.length || 0} Jours actifs</span>
+          </div>
           
-          <div className="flex gap-2 mt-4">
-            <button onClick={() => setEditingProfile(true)} className="px-6 py-2 bg-[#1A2536] border border-white/10 rounded-xl text-[10px] font-black text-[#D2B48C] hover:bg-[#253247] transition-all uppercase tracking-widest">Détails Bio</button>
+          <div className="flex gap-2 mt-6">
+            <button onClick={() => setEditingProfile(true)} className="px-8 py-3 bg-[#D2B48C] rounded-2xl text-[10px] font-black text-[#050B14] hover:brightness-110 transition-all uppercase tracking-widest shadow-lg shadow-[#D2B48C]/10">Réglages Business</button>
           </div>
         </div>
 
+        {/* Section Planning résumé */}
+        {user.availableDays && user.availableDays.length > 0 && (
+            <div className="bg-[#0D1625] p-5 rounded-[2rem] border border-white/5">
+                <h3 className="text-[9px] font-black text-slate-500 uppercase tracking-[0.2em] mb-3 flex items-center gap-2">
+                    <Icon name="calendar" className="w-4 h-4 text-cyan-400" />
+                    Planning Hebdomadaire
+                </h3>
+                <div className="flex flex-wrap gap-2">
+                    {user.availableDays.map(day => (
+                        <span key={day} className="px-3 py-1 bg-cyan-500/10 border border-cyan-500/20 rounded-lg text-[10px] text-cyan-400 font-bold uppercase">{day}</span>
+                    ))}
+                </div>
+            </div>
+        )}
+
         {/* Section Spécialités Multi-choix */}
-        <section className="bg-[#0D1625] p-5 rounded-[2.5rem] border border-white/5 space-y-4">
+        <section className="bg-[#0D1625] p-5 rounded-[2rem] border border-white/5 space-y-4">
             <div className="flex items-center gap-2 mb-2">
                 <Icon name="sparkles" className="w-4 h-4 text-[#D2B48C]" />
-                <h3 className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Mes Spécialités (Carte)</h3>
+                <h3 className="text-[9px] font-black text-slate-500 uppercase tracking-[0.2em]">Spécialités Visibles</h3>
             </div>
             <div className="grid grid-cols-3 gap-2">
                 {[UserType.Photographer, UserType.Videographer, UserType.Model].map(role => {
@@ -118,7 +139,7 @@ const ProfileView: React.FC = () => {
                             className={`py-3 rounded-2xl border transition-all text-[9px] font-black uppercase tracking-tighter ${
                                 isActive 
                                 ? 'bg-[#D2B48C] border-[#D2B48C] text-[#050B14] shadow-lg shadow-[#D2B48C]/20' 
-                                : 'bg-[#1A2536] border-white/10 text-slate-500 hover:border-white/30'
+                                : 'bg-[#1A2536] border-white/5 text-slate-500 hover:border-white/30'
                             }`}
                         >
                             {role === UserType.Photographer ? 'Photo' : role === UserType.Videographer ? 'Vidéo' : 'Modèle'}
@@ -126,20 +147,17 @@ const ProfileView: React.FC = () => {
                     )
                 })}
             </div>
-            <p className="text-[8px] text-slate-600 font-bold uppercase text-center mt-2 tracking-widest">
-                Sélectionnez vos rôles pour apparaître sur la carte
-            </p>
         </section>
 
         {user.isPro && (
-            <div className={`p-5 rounded-2xl border transition-all flex items-center justify-between ${user.isAvailableNow ? 'bg-red-600/10 border-red-500/30 shadow-[0_0_20px_rgba(239,68,68,0.1)]' : 'bg-[#1A2536] border-white/5'}`}>
+            <div className={`p-5 rounded-[2rem] border transition-all flex items-center justify-between ${user.isAvailableNow ? 'bg-red-600/10 border-red-500/30 shadow-[0_0_20px_rgba(239,68,68,0.1)]' : 'bg-[#1A2536] border-white/5'}`}>
                 <div className="flex items-center gap-4">
-                    <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${user.isAvailableNow ? 'bg-red-600 animate-pulse shadow-lg shadow-red-500/40' : 'bg-[#0D1625]'}`}>
+                    <div className={`w-12 h-12 rounded-[1.2rem] flex items-center justify-center ${user.isAvailableNow ? 'bg-red-600 animate-pulse shadow-lg shadow-red-500/40' : 'bg-[#0D1625]'}`}>
                         <Icon name="bolt" className="w-6 h-6 text-white" />
                     </div>
                     <div>
                         <h4 className={`font-black text-[10px] uppercase tracking-widest ${user.isAvailableNow ? 'text-red-400' : 'text-slate-500'}`}>Mode Live Broadcast</h4>
-                        <p className="text-[10px] text-slate-600 font-bold uppercase">Visible en temps réel</p>
+                        <p className="text-[10px] text-slate-600 font-bold uppercase">Signal GPS prioritaire</p>
                     </div>
                 </div>
                 <button onClick={toggleLive} className={`w-14 h-8 rounded-full p-1 transition-all ${user.isAvailableNow ? 'bg-red-600' : 'bg-slate-700'}`}>
@@ -161,9 +179,9 @@ const ProfileView: React.FC = () => {
 
         <section>
           <div className="flex justify-between items-end mb-4">
-            <h3 className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Portfolio Personnel</h3>
+            <h3 className="text-[9px] font-black text-slate-500 uppercase tracking-[0.2em]">Galerie de Référence</h3>
             <button onClick={() => mediaInputRef.current?.click()} disabled={isUploading} className="text-[10px] font-black text-[#D2B48C] uppercase flex items-center gap-1 active:scale-90 transition-all">
-                {isUploading ? 'Chargement...' : 'Ajouter +'}
+                {isUploading ? 'Flux...' : 'Upload +'}
             </button>
             <input type="file" ref={mediaInputRef} onChange={handleMediaImport} className="hidden" accept="image/*,video/*" multiple />
           </div>
@@ -176,7 +194,7 @@ const ProfileView: React.FC = () => {
                     onClick={() => setFullScreenMedia(item)} 
                     alt="Portfolio item"
                 />
-                <button onClick={() => removeMedia(i)} className="absolute top-1 right-1 p-1 bg-black/60 rounded-lg text-white">
+                <button onClick={() => removeMedia(i)} className="absolute top-1.5 right-1.5 p-1.5 bg-black/60 rounded-lg text-white backdrop-blur-md opacity-0 group-hover:opacity-100 transition-opacity">
                     <Icon name="close" className="w-3 h-3" />
                 </button>
               </div>

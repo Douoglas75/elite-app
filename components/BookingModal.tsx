@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo } from 'react';
 import type { User } from '../types';
 import Icon from './Icon';
@@ -10,16 +11,17 @@ interface BookingModalProps {
 
 type BookingStep = 'date' | 'time' | 'brief' | 'payment' | 'confirmed';
 
-const timeSlots = [
-    { id: 'morning', label: 'Matin', time: '09:00 - 12:00', duration: 3 },
-    { id: 'afternoon', label: 'Après-midi', time: '14:00 - 17:00', duration: 3 },
-    { id: 'evening', label: 'Soirée', time: '18:00 - 20:00', duration: 2 },
+const startTimes = [
+    "08:00", "09:00", "10:00", "11:00", "12:00", 
+    "13:00", "14:00", "15:00", "16:00", "17:00", 
+    "18:00", "19:00", "20:00"
 ];
 
 const BookingModal: React.FC<BookingModalProps> = ({ user }) => {
   const [step, setStep] = useState<BookingStep>('date');
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
-  const [selectedTimeSlot, setSelectedTimeSlot] = useState<(typeof timeSlots)[0]>(timeSlots[0]);
+  const [selectedStartTime, setSelectedStartTime] = useState(startTimes[2]);
+  const [duration, setDuration] = useState(2);
   const [notes, setNotes] = useState('');
   const [location, setLocation] = useState('');
   
@@ -42,18 +44,13 @@ const BookingModal: React.FC<BookingModalProps> = ({ user }) => {
     setStep('time');
   };
   
-  const handleTimeSelect = (slot: (typeof timeSlots)[0]) => {
-    setSelectedTimeSlot(slot);
-    setStep('brief');
-  };
-
   const handlePaymentConfirm = () => {
-    if (selectedDate && selectedTimeSlot) {
+    if (selectedDate) {
       confirmBooking({
         professionalId: user.id,
         date: selectedDate.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' }),
-        time: selectedTimeSlot.time,
-        duration: selectedTimeSlot.duration,
+        time: selectedStartTime,
+        duration: duration,
         notes,
         shootLocation: location || "À définir"
       });
@@ -91,35 +88,54 @@ const BookingModal: React.FC<BookingModalProps> = ({ user }) => {
         );
       case 'time':
         return (
-          <div className="p-6">
-            <button onClick={() => setStep('date')} className="text-[10px] font-black text-[#D2B48C] uppercase tracking-widest mb-6 flex items-center gap-2">
+          <div className="p-6 space-y-8">
+            <button onClick={() => setStep('date')} className="text-[10px] font-black text-[#D2B48C] uppercase tracking-widest mb-2 flex items-center gap-2">
               <Icon name="chevronRight" className="w-3 h-3 rotate-180" /> Modifier date
             </button>
-            <h3 className="text-sm font-black text-white uppercase tracking-widest mb-6">Créneau horaire</h3>
-            <div className="space-y-3">
-                {timeSlots.map(slot => (
-                    <button 
-                      key={slot.id} 
-                      onClick={() => handleTimeSelect(slot)} 
-                      className={`w-full text-left p-5 rounded-[1.5rem] border transition-all flex justify-between items-center ${
-                        selectedTimeSlot.id === slot.id ? 'bg-[#D2B48C]/10 border-[#D2B48C]' : 'bg-[#1A2536] border-white/5'
-                      }`}
-                    >
-                       <div>
-                         <p className={`font-black uppercase text-xs ${selectedTimeSlot.id === slot.id ? 'text-[#D2B48C]' : 'text-white'}`}>{slot.label}</p>
-                         <p className="text-[10px] text-slate-500 font-bold uppercase mt-0.5">{slot.time}</p>
-                       </div>
-                       <p className="font-black text-lg text-[#D2B48C]">${user.rate * slot.duration}</p>
-                    </button>
-                ))}
+            
+            <div>
+                <h3 className="text-sm font-black text-white uppercase tracking-widest mb-4">Heure de début</h3>
+                <div className="flex gap-2 overflow-x-auto no-scrollbar pb-2">
+                    {startTimes.map(time => (
+                        <button 
+                            key={time} 
+                            onClick={() => setSelectedStartTime(time)} 
+                            className={`px-6 py-3 rounded-xl border font-black transition-all ${selectedStartTime === time ? 'bg-[#D2B48C] border-[#D2B48C] text-[#050B14]' : 'bg-[#1A2536] border-white/5 text-white'}`}
+                        >
+                            {time}
+                        </button>
+                    ))}
+                </div>
             </div>
+
+            <div>
+                <h3 className="text-sm font-black text-white uppercase tracking-widest mb-4 flex justify-between">
+                    <span>Durée du shooting</span>
+                    <span className="text-[#D2B48C]">{duration}h</span>
+                </h3>
+                <div className="flex items-center gap-4">
+                    <button onClick={() => setDuration(Math.max(1, duration - 1))} className="w-12 h-12 rounded-xl bg-gray-800 border border-gray-700 flex items-center justify-center text-white font-black text-xl">-</button>
+                    <div className="flex-1 h-2 bg-gray-800 rounded-full relative">
+                        <div className="absolute h-full bg-[#D2B48C] rounded-full" style={{ width: `${(duration / 8) * 100}%` }}></div>
+                    </div>
+                    <button onClick={() => setDuration(Math.min(8, duration + 1))} className="w-12 h-12 rounded-xl bg-gray-800 border border-gray-700 flex items-center justify-center text-white font-black text-xl">+</button>
+                </div>
+                <div className="flex justify-between mt-6 pt-6 border-t border-white/5">
+                    <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">Estimation</p>
+                    <p className="text-2xl font-black text-white">${user.rate * duration}</p>
+                </div>
+            </div>
+
+            <button onClick={() => setStep('brief')} className="w-full bg-[#D2B48C] text-[#050B14] font-black py-4 rounded-xl uppercase tracking-widest text-xs">
+              Continuer vers le brief
+            </button>
           </div>
         );
       case 'brief':
         return (
           <div className="p-6 space-y-6">
             <button onClick={() => setStep('time')} className="text-[10px] font-black text-[#D2B48C] uppercase tracking-widest mb-2 flex items-center gap-2">
-                <Icon name="chevronRight" className="w-3 h-3 rotate-180" /> Modifier créneau
+                <Icon name="chevronRight" className="w-3 h-3 rotate-180" /> Modifier horaire
             </button>
             <div className="space-y-4">
                 <div>
@@ -149,7 +165,7 @@ const BookingModal: React.FC<BookingModalProps> = ({ user }) => {
           </div>
         );
       case 'payment':
-        const prestationTotal = user.rate * selectedTimeSlot.duration;
+        const prestationTotal = user.rate * duration;
         const serviceFee = prestationTotal * 0.12;
         const finalTotal = prestationTotal + serviceFee;
 
@@ -158,11 +174,11 @@ const BookingModal: React.FC<BookingModalProps> = ({ user }) => {
             <h3 className="text-sm font-black text-white uppercase tracking-widest mb-6">Récapitulatif Escrow</h3>
             <div className="bg-[#1A2536] p-6 rounded-2xl mb-8 border border-white/5 space-y-4">
                 <div className="flex justify-between items-center">
-                    <span className="text-[10px] font-bold text-slate-500 uppercase">Prestation ({selectedTimeSlot.duration}h)</span>
+                    <span className="text-[10px] font-bold text-slate-500 uppercase">Prestation ({duration}h)</span>
                     <span className="font-black text-white text-sm">${prestationTotal.toFixed(2)}</span>
                 </div>
                  <div className="flex justify-between items-center">
-                    <span className="text-[10px] font-bold text-slate-500 uppercase">Frais Sécurisation IA</span>
+                    <span className="text-[10px] font-bold text-slate-500 uppercase">Frais Sécurisation Elite</span>
                     <span className="font-black text-[#D2B48C] text-sm">${serviceFee.toFixed(2)}</span>
                 </div>
                  <div className="pt-4 border-t border-white/5 flex justify-between items-center">
@@ -183,7 +199,7 @@ const BookingModal: React.FC<BookingModalProps> = ({ user }) => {
                     <Icon name="check" className="w-10 h-10 text-[#D2B48C]" />
                  </div>
                  <h3 className="text-2xl font-black text-white uppercase tracking-tight">Demande Envoyée</h3>
-                 <p className="text-slate-500 mt-3 text-sm font-medium">Le talent a été notifié de votre proposition Elite.</p>
+                 <p className="text-slate-500 mt-3 text-sm font-medium">Le talent a été notifié de votre proposition de {duration}h.</p>
                  <button onClick={onClose} className="w-full mt-10 bg-[#1A2536] text-white font-black py-4 rounded-xl uppercase tracking-widest text-xs">
                     Fermer
                 </button>

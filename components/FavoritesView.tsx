@@ -1,3 +1,4 @@
+
 import React, { useMemo, memo } from 'react';
 import { useFavorites } from '../contexts/FavoritesContext';
 import UserProfileCard from './UserProfileCard';
@@ -9,7 +10,7 @@ import { useAppContext } from '../contexts/AppContext';
 const FavoritesView: React.FC = () => {
   const { favoriteIds } = useFavorites();
   const { users } = useUser();
-  const { viewProfile } = useAppContext();
+  const { viewProfile, setActiveTab } = useAppContext();
   
   const favoriteUsers = useMemo(() => 
     users.filter(user => favoriteIds.includes(user.id)),
@@ -17,11 +18,14 @@ const FavoritesView: React.FC = () => {
   );
 
   return (
-    <div className="flex flex-col h-full animate-fade-in">
-      <header className="p-4 border-b border-gray-800/50 flex-shrink-0">
-        <h1 className="text-xl font-bold text-white">Mes Favoris</h1>
+    <div className="flex flex-col h-full animate-fade-in bg-[#050B14]">
+      <header className="p-4 md:p-6 border-b border-white/5 flex items-center gap-4 bg-[#0D1625]/80 backdrop-blur-md sticky top-0 z-50">
+        <button onClick={() => setActiveTab('discover')} className="p-3 bg-white/5 hover:bg-white/10 rounded-xl text-[#D2B48C] transition-all">
+           <Icon name="chevronRight" className="w-5 h-5 rotate-180" />
+        </button>
+        <h1 className="text-xl font-black text-white uppercase tracking-tighter">Mes Favoris</h1>
       </header>
-      <div className="flex-1 pb-24 md:pb-4">
+      <div className="flex-1 pb-24 md:pb-4 overflow-y-auto">
         {favoriteUsers.length > 0 ? (
           <div className="p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {favoriteUsers.map(user => (
@@ -30,9 +34,9 @@ const FavoritesView: React.FC = () => {
           </div>
         ) : (
           <div className="flex flex-col items-center justify-center h-full text-center text-gray-500 p-8">
-            <Icon name="heart" className="w-16 h-16 text-gray-600 mb-4" />
-            <h2 className="text-xl font-semibold text-white">Aucun favori pour le moment</h2>
-            <p className="mt-2 max-w-xs">Cliquez sur le cœur sur un profil pour l'ajouter à votre sélection personnelle.</p>
+            <Icon name="heart" className="w-16 h-16 text-gray-700 mb-4" />
+            <h2 className="text-xl font-semibold text-white">Aucun favori</h2>
+            <p className="mt-2 max-w-xs text-sm">Cliquez sur le cœur sur un profil pour l'ajouter ici.</p>
           </div>
         )}
       </div>
