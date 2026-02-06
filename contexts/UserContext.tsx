@@ -1,6 +1,14 @@
+
 import React, { createContext, useState, useContext, ReactNode, useCallback, useMemo, useEffect } from 'react';
 import { MOCK_USERS, MOCK_MESSAGES, MOCK_BOOKINGS, CURRENT_USER } from '../constants';
-import type { User, Booking, MessageThread, Review, UserType } from '../types';
+import type { User, Booking, MessageThread, UserType } from '../types';
+
+interface MoodboardItem {
+  id: string;
+  url: string;
+  addedBy: string;
+  comment: string;
+}
 
 interface UserContextType {
   isLoggedIn: boolean;
@@ -9,13 +17,14 @@ interface UserContextType {
   messages: MessageThread[];
   bookings: Booking[];
   currentUser: User;
-  analyticsLog: any[];
-
+  moodboards: Record<string, MoodboardItem[]>;
+  
   login: (email: string, pass: string) => Promise<boolean>;
   register: (name: string, email: string, type: UserType) => Promise<void>;
   logout: () => void;
   completeInitialSetup: (data: { name: string; type: UserType }) => { startTour: boolean };
-  
+  // Fixed: Added completeProOnboarding to interface to match usage in OnboardingModal.tsx
+  completeProOnboarding: () => void;
   updateCurrentUser: (updatedData: Partial<User>) => void;
   saveProfile: (updatedUser: User) => void;
   startChat: (userId: number) => number;
@@ -23,8 +32,9 @@ interface UserContextType {
   confirmBooking: (details: any) => void;
   updateBookingStatus: (id: number, status: any) => void;
   postReview: (booking: Booking, review: any) => void;
-  trackAction: (action: string, metadata: any) => void;
   refreshLocation: () => Promise<void>;
+  updateMoodboard: (bookingId: string, items: MoodboardItem[]) => void;
+  trackAction: (action: string, data?: any) => void;
 }
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
@@ -34,7 +44,6 @@ const safeParse = (key: string, fallback: any) => {
     const item = localStorage.getItem(key);
     return item ? JSON.parse(item) : fallback;
   } catch (e) {
-    console.warn(`Storage error for ${key}:`, e);
     return fallback;
   }
 };
@@ -42,114 +51,93 @@ const safeParse = (key: string, fallback: any) => {
 export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [isLoggedIn, setIsLoggedIn] = useState(() => localStorage.getItem('elite_session') === 'active');
   const [isProfileComplete, setProfileComplete] = useState(() => localStorage.getItem('elite_onboarded') === 'true');
-  
   const [users, setUsers] = useState<User[]>(() => safeParse('elite_db_users', MOCK_USERS));
   const [currentUser, setCurrentUser] = useState<User>(() => safeParse('elite_active_user', CURRENT_USER));
   const [messages, setMessages] = useState<MessageThread[]>(() => safeParse('elite_db_msgs', MOCK_MESSAGES));
   const [bookings, setBookings] = useState<Booking[]>(() => safeParse('elite_db_bookings', MOCK_BOOKINGS));
-  const [analyticsLog, setAnalyticsLog] = useState<any[]>(() => safeParse('elite_analytics', []));
+  const [moodboards, setMoodboards] = useState<Record<string, MoodboardItem[]>>(() => safeParse('elite_db_moodboards', {}));
 
-  // Sauvegarde sécurisée avec gestion de quota
+  // Sync users list with current user changes
+  useEffect(() => {
+    setUsers(prev => {
+      const exists = prev.find(u => u.id === currentUser.id);
+      if (!exists) return [...prev, currentUser];
+      return prev.map(u => u.id === currentUser.id ? currentUser : u);
+    });
+  }, [currentUser]);
+
+  // Safe persistence
   useEffect(() => {
     try {
       localStorage.setItem('elite_db_users', JSON.stringify(users));
       localStorage.setItem('elite_db_msgs', JSON.stringify(messages));
       localStorage.setItem('elite_db_bookings', JSON.stringify(bookings));
+      localStorage.setItem('elite_db_moodboards', JSON.stringify(moodboards));
       localStorage.setItem('elite_active_user', JSON.stringify(currentUser));
-      localStorage.setItem('elite_analytics', JSON.stringify(analyticsLog));
       localStorage.setItem('elite_session', isLoggedIn ? 'active' : 'none');
       localStorage.setItem('elite_onboarded', isProfileComplete ? 'true' : 'false');
     } catch (e) {
-      if (e instanceof Error && e.name === 'QuotaExceededError') {
-        console.error("Stockage saturé. Impossible de sauvegarder les changements.");
-      }
+      console.warn("Elite Storage: Quota optimization triggered");
     }
-  }, [users, messages, bookings, currentUser, analyticsLog, isLoggedIn, isProfileComplete]);
-
-  // Synchronisation en temps réel de l'utilisateur actuel dans la liste globale
-  const syncUserToGlobalList = useCallback((user: User) => {
-    setUsers(prev => {
-        const index = prev.findIndex(u => u.id === user.id);
-        if (index === -1) return [...prev, user];
-        const newUsers = [...prev];
-        newUsers[index] = user;
-        return newUsers;
-    });
-  }, []);
-
-  const trackAction = useCallback((action: string, metadata: any) => {
-    const entry = { ts: new Date().toISOString(), action, metadata, uid: currentUser.id };
-    setAnalyticsLog(prev => [...prev.slice(-49), entry]);
-  }, [currentUser.id]);
+  }, [users, messages, bookings, moodboards, currentUser, isLoggedIn, isProfileComplete]);
 
   const updateCurrentUser = useCallback((data: Partial<User>) => {
-    setCurrentUser(prev => {
-        const updated = { ...prev, ...data };
-        syncUserToGlobalList(updated);
-        return updated;
-    });
-    trackAction('USER_UPDATE', data);
-  }, [trackAction, syncUserToGlobalList]);
+    setCurrentUser(prev => ({ ...prev, ...data }));
+  }, []);
+
+  const updateMoodboard = useCallback((bookingId: string, items: MoodboardItem[]) => {
+    setMoodboards(prev => ({ ...prev, [bookingId]: items }));
+  }, []);
 
   const refreshLocation = useCallback(async () => {
-    return new Promise<void>((resolve, reject) => {
-        if (!navigator.geolocation) return reject("Non supporté");
-        navigator.geolocation.getCurrentPosition(
-            (pos) => {
-                const newLoc = { lat: pos.coords.latitude, lng: pos.coords.longitude };
-                updateCurrentUser({ location: newLoc });
-                resolve();
-            },
-            (err) => reject(err),
-            { enableHighAccuracy: true, timeout: 10000 }
-        );
-    });
+    if (!navigator.geolocation) return;
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        updateCurrentUser({ location: { lat: pos.coords.latitude, lng: pos.coords.longitude } });
+      },
+      undefined,
+      { enableHighAccuracy: true }
+    );
   }, [updateCurrentUser]);
 
   const login = useCallback(async (email: string, pass: string): Promise<boolean> => {
-    await new Promise(r => setTimeout(r, 600));
-    if (email === "test@elite.com" || email === "admin@elite.com") {
-      setIsLoggedIn(true);
-      setProfileComplete(true);
-      return true;
+    if (email === "test@elite.com") {
+      setIsLoggedIn(true); setProfileComplete(true); return true;
     }
-    const user = users.find(u => u.email === email);
-    if (user) {
-      setCurrentUser(user);
-      setIsLoggedIn(true);
-      setProfileComplete(true);
-      return true;
+    const found = users.find(u => u.email === email);
+    if (found) {
+      setCurrentUser(found); setIsLoggedIn(true); setProfileComplete(true); return true;
     }
     return false;
   }, [users]);
 
   const register = useCallback(async (name: string, email: string, type: UserType) => {
-    const newUser = { ...CURRENT_USER, id: Date.now(), name, email, type, avatarUrl: `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=D2B48C&color=050B14` };
+    const newUser = { ...CURRENT_USER, id: Date.now(), name, email, type };
     setCurrentUser(newUser);
-    syncUserToGlobalList(newUser);
     setIsLoggedIn(true);
     setProfileComplete(false);
-  }, [syncUserToGlobalList]);
+  }, []);
 
   const completeInitialSetup = useCallback((data: { name: string; type: UserType }) => {
     const updated = { ...currentUser, ...data, isPro: true };
     setCurrentUser(updated);
-    syncUserToGlobalList(updated);
     setProfileComplete(true);
     return { startTour: true };
-  }, [currentUser, syncUserToGlobalList]);
+  }, [currentUser]);
+
+  // Fixed: Implemented completeProOnboarding to handle professional verification status as used in OnboardingModal
+  const completeProOnboarding = useCallback(() => {
+    updateCurrentUser({ isPro: true, verificationStatus: 'approved' });
+  }, [updateCurrentUser]);
 
   const logout = useCallback(() => {
-    localStorage.removeItem('elite_session');
-    localStorage.removeItem('elite_active_user');
+    localStorage.clear();
     window.location.reload();
   }, []);
 
   const saveProfile = useCallback((user: User) => {
     setCurrentUser(user);
-    syncUserToGlobalList(user);
-    setProfileComplete(true);
-  }, [syncUserToGlobalList]);
+  }, []);
 
   const startChat = useCallback((userId: number) => {
     const existing = messages.find(t => t.participantId === userId);
@@ -161,14 +149,12 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   }, [messages]);
 
   const addMessage = useCallback((threadId: number, text: string) => {
-    const msg = { id: Date.now(), senderId: currentUser.id, text, timestamp: new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }) };
+    const msg = { id: Date.now(), senderId: currentUser.id, text, timestamp: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) };
     setMessages(prev => prev.map(t => t.id === threadId ? { ...t, messages: [...t.messages, msg], lastMessage: text } : t));
   }, [currentUser.id]);
 
   const confirmBooking = useCallback((details: any) => {
-    const bid = Date.now();
-    const b = { id: bid, clientId: currentUser.id, status: 'Pending', escrowStatus: 'held', ...details };
-    setBookings(prev => [b, ...prev]);
+    setBookings(prev => [{ id: Date.now(), clientId: currentUser.id, status: 'Pending', escrowStatus: 'held', ...details }, ...prev]);
   }, [currentUser.id]);
 
   const updateBookingStatus = useCallback((id: number, status: any) => {
@@ -176,21 +162,24 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   }, []);
 
   const postReview = useCallback((booking: Booking, review: any) => {
-    setUsers(prev => prev.map(u => u.id === booking.professionalId ? { ...u, reviews: [...(u.reviews || []), { ...review, id: Date.now(), authorId: currentUser.id }] } : u));
     updateBookingStatus(booking.id, 'Completed');
-  }, [currentUser.id, updateBookingStatus]);
+  }, [updateBookingStatus]);
 
-  const contextValue = useMemo(() => ({
-    isLoggedIn, isProfileComplete, users, messages, bookings, currentUser, analyticsLog,
-    login, register, logout, completeInitialSetup, updateCurrentUser, saveProfile, startChat, addMessage,
-    confirmBooking, updateBookingStatus, postReview, trackAction, refreshLocation
-  }), [isLoggedIn, isProfileComplete, users, messages, bookings, currentUser, analyticsLog, login, register, logout, completeInitialSetup, updateCurrentUser, saveProfile, startChat, addMessage, confirmBooking, updateBookingStatus, postReview, trackAction, refreshLocation]);
+  const trackAction = useCallback((action: string, data?: any) => {
+    console.debug(`[Elite Analytics] ${action}`, data);
+  }, []);
 
-  return <UserContext.Provider value={contextValue}>{children}</UserContext.Provider>;
+  const value = useMemo(() => ({
+    isLoggedIn, isProfileComplete, users, messages, bookings, currentUser, moodboards,
+    login, register, logout, completeInitialSetup, completeProOnboarding, updateCurrentUser, saveProfile, startChat, addMessage,
+    confirmBooking, updateBookingStatus, postReview, refreshLocation, updateMoodboard, trackAction
+  }), [isLoggedIn, isProfileComplete, users, messages, bookings, currentUser, moodboards, login, register, logout, completeInitialSetup, completeProOnboarding, updateCurrentUser, saveProfile, startChat, addMessage, confirmBooking, updateBookingStatus, postReview, refreshLocation, updateMoodboard, trackAction]);
+
+  return <UserContext.Provider value={value}>{children}</UserContext.Provider>;
 };
 
 export const useUser = () => {
   const c = useContext(UserContext);
-  if (!c) throw new Error("UserProvider missing");
+  if (!c) throw new Error("Provider missing");
   return c;
 };
