@@ -1,6 +1,7 @@
+
 import React, { useState, useRef } from 'react';
 import Icon from './Icon';
-import type { User } from '../types';
+import { UserType, type User } from '../types';
 import { generateProfileSuggestions } from '../services/geminiService';
 import { useUser } from '../contexts/UserContext';
 import { useAppContext } from '../contexts/AppContext';
@@ -10,6 +11,7 @@ const EditProfileScreen: React.FC = () => {
   const { setEditingProfile } = useAppContext();
   
   const [profilePicture, setProfilePicture] = useState<string | null>(currentUser.avatarUrl || null);
+  const [userType, setUserType] = useState<UserType>(currentUser.type);
   const [headline, setHeadline] = useState(currentUser.headline);
   const [bio, setBio] = useState(currentUser.bio);
   const [location, setLocation] = useState<{ lat: number; lng: number }>(currentUser.location);
@@ -60,7 +62,7 @@ const EditProfileScreen: React.FC = () => {
     setSuggestions(null);
     setError('');
     try {
-      const result = await generateProfileSuggestions(currentUser.type);
+      const result = await generateProfileSuggestions(userType);
       setSuggestions(result);
     } catch (e) {
       setError("Erreur lors de la génération IA. Veuillez réessayer.");
@@ -80,6 +82,7 @@ const EditProfileScreen: React.FC = () => {
     const updatedUser: User = {
       ...currentUser,
       avatarUrl: profilePicture || '',
+      type: userType,
       headline,
       bio,
       location,
@@ -98,12 +101,12 @@ const EditProfileScreen: React.FC = () => {
     <div className="absolute inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fade-in">
     <div className="flex flex-col h-full w-full max-w-md bg-gray-900/80 backdrop-blur-md rounded-2xl border border-gray-700 shadow-2xl shadow-cyan-500/10 animate-scale-in">
       <header className="p-4 flex justify-between items-center border-b border-gray-800/50 flex-shrink-0">
-        <h1 className="text-xl font-bold">Modifier le Profil</h1>
+        <h1 className="text-xl font-bold text-white">Modifier le Profil</h1>
         <button onClick={() => setEditingProfile(false)} className="text-gray-400 hover:text-white">
             <Icon name="close" />
         </button>
       </header>
-      <div className="flex-1 p-6 overflow-y-auto">
+      <div className="flex-1 p-6 overflow-y-auto custom-scrollbar">
           <form onSubmit={handleSubmit} className="space-y-6">
             <div>
               <label className="block text-sm font-medium text-gray-300 mb-2">Photo de profil</label>
@@ -127,20 +130,35 @@ const EditProfileScreen: React.FC = () => {
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
                   className="bg-gray-700 hover:bg-gray-600 text-white text-sm font-bold py-2 px-4 rounded-full"
-                  aria-label="Changer la photo de profil"
                 >
                   Changer
                 </button>
               </div>
             </div>
+
+            <div>
+              <label className="block text-xs font-black text-slate-500 uppercase tracking-widest mb-3 text-center">Spécialité Pro</label>
+              <div className="grid grid-cols-3 gap-2">
+                {[UserType.Model, UserType.Photographer, UserType.Videographer].map((type) => (
+                  <button
+                    key={type}
+                    type="button"
+                    onClick={() => setUserType(type)}
+                    className={`py-3 px-1 rounded-xl border-2 text-[10px] font-black uppercase tracking-tighter transition-all ${userType === type ? 'bg-cyan-600/20 border-cyan-500 text-cyan-400' : 'bg-gray-800 border-gray-700 text-gray-400 hover:border-gray-600'}`}
+                  >
+                    {type}
+                  </button>
+                ))}
+              </div>
+            </div>
             
             <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label htmlFor="email" className="block text-sm font-medium text-gray-300 mb-2">Email</label>
+                  <label htmlFor="email" className="block text-xs font-black text-slate-500 uppercase tracking-widest mb-2">Email</label>
                   <input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="votre.email@ FAI.com" className="w-full bg-gray-800 text-white p-3 rounded-md border border-gray-700 focus:ring-cyan-500 focus:border-cyan-500 outline-none" />
                 </div>
                 <div>
-                  <label htmlFor="age" className="block text-sm font-medium text-gray-300 mb-2">Âge</label>
+                  <label htmlFor="age" className="block text-xs font-black text-slate-500 uppercase tracking-widest mb-2">Âge</label>
                   <input id="age" type="number" value={age || ''} onChange={(e) => setAge(Number(e.target.value))} placeholder="25" className="w-full bg-gray-800 text-white p-3 rounded-md border border-gray-700 focus:ring-cyan-500 focus:border-cyan-500 outline-none" />
                 </div>
             </div>
@@ -150,7 +168,7 @@ const EditProfileScreen: React.FC = () => {
                     <Icon name="sparkles" className="w-6 h-6 text-purple-400" />
                     <h4 className="font-semibold text-white">Assistant de Profil IA</h4>
                 </div>
-                <p className="text-sm text-purple-300/80">Bloqué ? Laissez notre IA vous suggérer un titre et une biographie percutants pour vous démarquer.</p>
+                <p className="text-[11px] text-purple-300/80">Besoin d'aide ? Notre IA peut générer un titre et une bio en fonction de votre spécialité : <strong>{userType}</strong>.</p>
                 <button
                     type="button"
                     onClick={handleGenerateAIProfile}
@@ -159,70 +177,61 @@ const EditProfileScreen: React.FC = () => {
                 >
                     {isGenerating ? (
                         <>
-                            <div className="w-5 h-5 animate-spin rounded-full border-2 border-white border-t-transparent"></div>
-                            <span>Génération en cours...</span>
+                            <div className="w-4 h-4 animate-spin rounded-full border-2 border-white border-t-transparent"></div>
+                            <span className="text-xs uppercase">Génération...</span>
                         </>
                     ) : (
-                        "Générer avec l'IA"
+                        <span className="text-xs uppercase">Suggérer avec l'IA</span>
                     )}
                 </button>
 
                 {suggestions && (
                     <div className="animate-fade-in space-y-4 pt-3">
                         <div>
-                            <h5 className="text-sm font-semibold text-gray-300 mb-2">Suggestions de Titre :</h5>
+                            <h5 className="text-[10px] font-black text-slate-400 uppercase mb-2">Titres suggérés :</h5>
                             <div className="space-y-2">
                                 {suggestions.headlines.map((h, i) => (
-                                    <button key={i} type="button" onClick={() => setHeadline(h)} className="w-full text-left p-2 bg-gray-700/50 hover:bg-gray-600/50 rounded-md text-sm">
+                                    <button key={i} type="button" onClick={() => setHeadline(h)} className="w-full text-left p-2 bg-gray-700/50 hover:bg-gray-600/50 rounded-md text-[11px] text-slate-200">
                                         "{h}"
                                     </button>
                                 ))}
                             </div>
-                        </div>
-                         <div>
-                            <h5 className="text-sm font-semibold text-gray-300 mb-2">Suggestion de Biographie :</h5>
-                             <div className="p-2 bg-gray-700/50 rounded-md text-sm text-gray-300 italic">
-                                {suggestions.bio}
-                             </div>
-                             <button type="button" onClick={() => setBio(suggestions.bio)} className="w-full text-center p-1 mt-2 bg-gray-600/70 hover:bg-gray-600 text-xs rounded-md">
-                                Utiliser cette biographie
-                             </button>
                         </div>
                     </div>
                 )}
             </div>
 
             <div>
-              <label htmlFor="headline" className="block text-sm font-medium text-gray-300 mb-2">Titre du profil</label>
+              <label htmlFor="headline" className="block text-xs font-black text-slate-500 uppercase tracking-widest mb-2">Titre du profil</label>
               <input id="headline" type="text" value={headline} onChange={(e) => setHeadline(e.target.value)} placeholder="Ex: Photographe de portrait à Paris" className="w-full bg-gray-800 text-white p-3 rounded-md border border-gray-700 focus:ring-cyan-500 focus:border-cyan-500 outline-none" required />
             </div>
             
             <div>
-              <label htmlFor="bio" className="block text-sm font-medium text-gray-300 mb-2">Biographie</label>
+              <label htmlFor="bio" className="block text-xs font-black text-slate-500 uppercase tracking-widest mb-2">Biographie</label>
               <textarea id="bio" rows={4} value={bio} onChange={(e) => setBio(e.target.value)} placeholder="Parlez-nous de votre style..." className="w-full bg-gray-800 text-white p-3 rounded-md border border-gray-700 focus:ring-cyan-500 focus:border-cyan-500 outline-none" required />
             </div>
 
             <div>
-               <label className="block text-sm font-medium text-gray-300 mb-2">Votre position</label>
+               <label className="block text-xs font-black text-slate-500 uppercase tracking-widest mb-2">Votre position</label>
                <button type="button" onClick={handleGetLocation} disabled={isLocating} className="w-full flex items-center justify-center gap-2 p-3 rounded-md bg-gray-800 border border-gray-700 hover:bg-gray-700 disabled:opacity-50">
-                  {isLocating ? <div className="w-5 h-5 animate-spin rounded-full border-2 border-white border-t-transparent"></div> : <Icon name="locationMarker" className="w-5 h-5 text-cyan-400"/>}
-                  <span>Mettre à jour ma position</span>
+                  {isLocating ? <div className="w-4 h-4 animate-spin rounded-full border-2 border-white border-t-transparent"></div> : <Icon name="locationMarker" className="w-5 h-5 text-cyan-400"/>}
+                  <span className="text-xs uppercase">Mettre à jour la géolocalisation</span>
                </button>
             </div>
             
              <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">Liens Sociaux</label>
+              <label className="block text-xs font-black text-slate-500 uppercase tracking-widest mb-2">Liens Sociaux</label>
                <div className="space-y-3">
                   <input type="url" value={website} onChange={(e) => setWebsite(e.target.value)} placeholder="https://votre-site.com" className="w-full bg-gray-800 text-white p-3 rounded-md border border-gray-700 focus:ring-cyan-500 focus:border-cyan-500 outline-none" />
                   <input type="url" value={instagram} onChange={(e) => setInstagram(e.target.value)} placeholder="https://instagram.com/votreprofil" className="w-full bg-gray-800 text-white p-3 rounded-md border border-gray-700 focus:ring-cyan-500 focus:border-cyan-500 outline-none" />
                </div>
             </div>
 
-            {error && <p className="text-red-400 text-sm text-center">{error}</p>}
+            {error && <p className="text-red-400 text-[10px] font-bold text-center uppercase">{error}</p>}
 
             <div className="pt-4">
-              <button type="submit" className="w-full bg-gradient-to-r from-cyan-500 to-purple-600 text-white font-bold py-3 px-6 rounded-lg shadow-lg hover:scale-105">
-                Enregistrer les modifications
+              <button type="submit" className="w-full bg-[#D2B48C] text-[#050B14] font-black py-4 px-6 rounded-xl shadow-lg hover:brightness-110 uppercase tracking-widest text-xs">
+                Valider les modifications
               </button>
             </div>
           </form>

@@ -31,7 +31,6 @@ interface UserContextType {
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
 
-// Helper for storage management
 const storage = {
     get: (key: string, fallback: any) => {
         try {
@@ -43,7 +42,7 @@ const storage = {
         try {
             localStorage.setItem(key, JSON.stringify(value));
         } catch (e) {
-            console.warn("Storage quota exceeded, cleaning old entries...");
+            console.error("Storage Error (likely quota exceeded):", e);
         }
     }
 };
@@ -52,31 +51,41 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [isLoggedIn, setIsLoggedIn] = useState(() => localStorage.getItem('elite_session') === 'active');
   const [isProfileComplete, setProfileComplete] = useState(() => localStorage.getItem('elite_onboarded') === 'true');
   
-  const [users, setUsers] = useState<User[]>(() => storage.get('elite_db_users', MOCK_USERS));
   const [currentUser, setCurrentUser] = useState<User>(() => storage.get('elite_active_user', CURRENT_USER));
+  const [users, setUsers] = useState<User[]>(() => {
+    const saved = storage.get('elite_db_users', MOCK_USERS);
+    const active = storage.get('elite_active_user', CURRENT_USER);
+    if (!saved.find((u: User) => u.id === active.id)) {
+        return [active, ...saved];
+    }
+    return saved;
+  });
+  
   const [messages, setMessages] = useState<MessageThread[]>(() => storage.get('elite_db_msgs', MOCK_MESSAGES));
   const [bookings, setBookings] = useState<Booking[]>(() => storage.get('elite_db_bookings', MOCK_BOOKINGS));
   const [moodboards, setMoodboards] = useState<Record<string, MoodboardItem[]>>(() => storage.get('elite_db_moodboards', {}));
 
-  // Automatic Sync across users list
+  // Synchronisation forcée : dès que currentUser change (portfolio, type, bio...), on met à jour la DB locale
   useEffect(() => {
+    storage.set('elite_active_user', currentUser);
     setUsers(prev => {
-      const exists = prev.find(u => u.id === currentUser.id);
-      if (!exists) return [...prev, currentUser];
-      return prev.map(u => u.id === currentUser.id ? currentUser : u);
+        const index = prev.findIndex(u => u.id === currentUser.id);
+        if (index === -1) return [currentUser, ...prev];
+        const newUsers = [...prev];
+        newUsers[index] = currentUser;
+        return newUsers;
     });
   }, [currentUser]);
 
-  // Persistent Save Loop
+  // Persistance globale de la liste d'utilisateurs et autres états
   useEffect(() => {
     storage.set('elite_db_users', users);
     storage.set('elite_db_msgs', messages);
     storage.set('elite_db_bookings', bookings);
     storage.set('elite_db_moodboards', moodboards);
-    storage.set('elite_active_user', currentUser);
     localStorage.setItem('elite_session', isLoggedIn ? 'active' : 'none');
     localStorage.setItem('elite_onboarded', isProfileComplete ? 'true' : 'false');
-  }, [users, messages, bookings, moodboards, currentUser, isLoggedIn, isProfileComplete]);
+  }, [users, messages, bookings, moodboards, isLoggedIn, isProfileComplete]);
 
   const updateCurrentUser = useCallback((data: Partial<User>) => {
     setCurrentUser(prev => ({ ...prev, ...data }));
@@ -135,7 +144,8 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   }, [updateCurrentUser]);
 
   const logout = useCallback(() => {
-    localStorage.clear();
+    localStorage.removeItem('elite_session');
+    setIsLoggedIn(false);
     window.location.reload();
   }, []);
 

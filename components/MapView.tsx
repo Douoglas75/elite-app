@@ -1,6 +1,7 @@
 
-import React, { useEffect, useRef, memo, useState } from 'react';
+import React, { useEffect, useRef, memo, useState, useMemo } from 'react';
 import type { User } from '../types';
+import { UserType } from '../types';
 import { useUser } from '../contexts/UserContext';
 import { useAppContext } from '../contexts/AppContext';
 import Icon from './Icon';
@@ -21,7 +22,15 @@ const MapView: React.FC<MapViewProps> = ({ filteredUsers }) => {
   const [activeLayer, setActiveLayer] = useState<'users' | 'spots'>('users');
   const [isLocating, setIsLocating] = useState(false);
 
-  const displayUsers = filteredUsers || allUsers;
+  // LOGIQUE CRITIQUE : Toujours inclure l'utilisateur actuel dans l'affichage de la carte
+  const displayUsers = useMemo(() => {
+    const list = filteredUsers || allUsers;
+    const isMeInList = list.some(u => u.id === currentUser.id);
+    if (!isMeInList) {
+        return [currentUser, ...list];
+    }
+    return list;
+  }, [filteredUsers, allUsers, currentUser]);
 
   useEffect(() => {
     const initMap = () => {
@@ -47,13 +56,13 @@ const MapView: React.FC<MapViewProps> = ({ filteredUsers }) => {
             
             setTimeout(() => {
               if (mapInstanceRef.current) mapInstanceRef.current.invalidateSize();
-            }, 250);
+            }, 500);
         } catch (e) {
             console.error("Leaflet Init Error:", e);
         }
     };
 
-    const timer = setTimeout(initMap, 150);
+    const timer = setTimeout(initMap, 200);
     
     return () => {
         clearTimeout(timer);
@@ -72,27 +81,52 @@ const MapView: React.FC<MapViewProps> = ({ filteredUsers }) => {
     userLayer.clearLayers();
 
     displayUsers.forEach(user => {
+      if (!user.location || typeof user.location.lat !== 'number') return;
+
       const isMe = user.id === currentUser.id;
-      const isPhotog = user.type === 'Photographe' || user.type === 'Vidéaste';
       
-      const colorClass = isMe ? 'border-blue-500' : (isPhotog ? 'border-[#D2B48C]' : 'border-white');
-      const bgClass = isMe ? 'bg-blue-500' : (isPhotog ? 'bg-[#D2B48C]' : 'bg-white');
+      // Détermination du label et de la couleur en fonction du type précis
+      let typeLabel = 'MD';
+      let colorClass = 'border-white';
+      let bgClass = 'bg-white';
+
+      if (user.type === UserType.Photographer) {
+          typeLabel = 'PH';
+          colorClass = 'border-[#D2B48C]';
+          bgClass = 'bg-[#D2B48C]';
+      } else if (user.type === UserType.Videographer) {
+          typeLabel = 'VD';
+          colorClass = 'border-purple-500';
+          bgClass = 'bg-purple-500';
+      } else if (user.type === UserType.Model) {
+          typeLabel = 'MD';
+          colorClass = 'border-pink-500';
+          bgClass = 'bg-pink-500';
+      }
+
+      if (isMe) {
+          colorClass = 'border-blue-500';
+          bgClass = 'bg-blue-500';
+      }
 
       const icon = L.divIcon({
-        html: `<div class="relative ${isMe ? 'z-[2000]' : ''} animate-scale-in">
+        html: `<div class="relative ${isMe ? 'z-[5000]' : ''} animate-scale-in">
+                 ${isMe ? `<div class="absolute -inset-4 bg-blue-500/20 rounded-full animate-ping"></div>` : ''}
                  ${user.isAvailableNow ? `<div class="absolute -inset-2 ${isMe ? 'bg-blue-500/30' : 'bg-red-500/20'} rounded-full animate-pulse"></div>` : ''}
-                 <div class="w-10 h-10 rounded-2xl border-2 ${colorClass} bg-[#0D1625] overflow-hidden shadow-2xl transition-all">
+                 <div class="w-10 h-10 rounded-2xl border-2 ${colorClass} bg-[#0D1625] overflow-hidden shadow-2xl transition-all ${isMe ? 'ring-4 ring-blue-500/30' : ''}">
                    <img src="${user.avatarUrl}" class="w-full h-full object-cover" />
                  </div>
                  <div class="absolute -bottom-1 -right-1 w-4 h-4 ${bgClass} rounded-lg flex items-center justify-center border border-[#0D1625] shadow-md">
-                    <div class="text-[7px] font-black text-[#0D1625] uppercase">${isMe ? 'ME' : (isPhotog ? 'PH' : 'MD')}</div>
+                    <div class="text-[7px] font-black text-[#0D1625] uppercase">${isMe ? 'ME' : typeLabel}</div>
                  </div>
                </div>`,
         className: '', iconSize: [40, 40], iconAnchor: [20, 20]
       });
 
-      const marker = L.marker([user.location.lat, user.location.lng], { icon, zIndexOffset: isMe ? 1000 : 0 })
-        .addTo(userLayer);
+      const marker = L.marker([user.location.lat, user.location.lng], { 
+        icon, 
+        zIndexOffset: isMe ? 10000 : 0 
+      }).addTo(userLayer);
 
       marker.on('mousedown touchstart', (e: any) => {
           L.DomEvent.stopPropagation(e);
@@ -120,7 +154,7 @@ const MapView: React.FC<MapViewProps> = ({ filteredUsers }) => {
     <div className="relative w-full h-full bg-[#050B14] overflow-hidden">
       <div ref={mapContainerRef} className="w-full h-full z-0" />
       
-      {/* HUD Overlay - Uses pointer-events-none to prevent click blockage */}
+      {/* HUD Overlay */}
       <div className="absolute inset-0 z-[500] pointer-events-none flex flex-col justify-between p-4 md:p-6 pb-24 md:pb-8">
         <div className="flex justify-center">
           <div className="bg-[#050B14]/90 backdrop-blur-xl p-1 rounded-2xl border border-white/10 shadow-2xl flex gap-1 pointer-events-auto">
