@@ -1,4 +1,5 @@
 
+
 export enum UserType {
   Model = 'Modèle',
   Photographer = 'Photographe',
@@ -76,12 +77,6 @@ export interface AISuggestion {
   justification: string;
 }
 
-export interface QuizQuestion {
-  question: string;
-  options: string[];
-  correctAnswerIndex: number;
-}
-
 export interface ChatMessage {
   id: number;
   senderId: number;
@@ -112,4 +107,11 @@ export interface Transaction {
   amount: number;
   description: string;
   date: string;
+}
+
+// Added QuizQuestion interface to resolve missing export error
+export interface QuizQuestion {
+  question: string;
+  options: string[];
+  correctAnswerIndex: number;
 }

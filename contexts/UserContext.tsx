@@ -50,7 +50,15 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [isProfileComplete, setProfileComplete] = useState(() => localStorage.getItem('elite_onboarded') === 'true');
   
   const [currentUser, setCurrentUser] = useState<User>(() => storage.get('elite_active_user', { ...CURRENT_USER }));
-  const [users, setUsers] = useState<User[]>(() => storage.get('elite_db_users', MOCK_USERS));
+  const [users, setUsers] = useState<User[]>(() => {
+    const saved = storage.get('elite_db_users', MOCK_USERS);
+    return saved.map((u: User) => ({
+      ...u,
+      completedShootsCount: u.completedShootsCount || Math.floor(Math.random() * 30) + 5,
+      reviews: u.reviews || []
+    }));
+  });
+  
   const [messages, setMessages] = useState<MessageThread[]>(() => storage.get('elite_db_msgs', MOCK_MESSAGES));
   const [bookings, setBookings] = useState<Booking[]>(() => storage.get('elite_db_bookings', MOCK_BOOKINGS));
   const [moodboards, setMoodboards] = useState<Record<string, MoodboardItem[]>>(() => storage.get('elite_db_moodboards', {}));
@@ -77,14 +85,6 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const updateCurrentUser = useCallback((data: Partial<User>) => {
     setCurrentUser(prev => ({ ...prev, ...data }));
-  }, []);
-
-  const completeProOnboarding = useCallback(() => {
-    setCurrentUser(prev => ({ 
-      ...prev, 
-      isPro: true, 
-      verificationStatus: 'approved' as VerificationStatus 
-    }));
   }, []);
 
   const saveProfile = useCallback((updatedUser: User) => {
@@ -135,7 +135,7 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         return false;
     },
     register: async (name: string, email: string, types: UserType[]) => {
-        setCurrentUser({ ...CURRENT_USER, id: Date.now(), name, email, types });
+        setCurrentUser({ ...CURRENT_USER, id: Date.now(), name, email, types, completedShootsCount: 0, reviews: [] });
         setIsLoggedIn(true);
         setProfileComplete(false);
     },
@@ -148,7 +148,10 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         setProfileComplete(true);
         return { startTour: true };
     },
-    completeProOnboarding, updateCurrentUser, saveProfile,
+    completeProOnboarding: () => {
+      setCurrentUser(prev => ({ ...prev, isPro: true, verificationStatus: 'approved' }));
+    }, 
+    updateCurrentUser, saveProfile,
     startChat: (userId: number) => {
         const existing = messages.find(t => t.participantId === userId);
         if (existing) return existing.id;
@@ -171,7 +174,7 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     refreshLocation: async () => ({ lat: 48.8566, lng: 2.3522 }), 
     updateMoodboard: (bid: string, items: any) => setMoodboards(prev => ({ ...prev, [bid]: items })),
     trackAction: (a: string, d: any) => console.log(a, d)
-  }), [isLoggedIn, isProfileComplete, users, messages, bookings, currentUser, moodboards, postReview, completeProOnboarding, saveProfile]);
+  }), [isLoggedIn, isProfileComplete, users, messages, bookings, currentUser, moodboards, postReview, saveProfile]);
 
   return <UserContext.Provider value={value}>{children}</UserContext.Provider>;
 };

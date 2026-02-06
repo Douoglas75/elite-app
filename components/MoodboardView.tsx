@@ -15,8 +15,8 @@ const MoodboardView: React.FC<{ bookingId: number }> = ({ bookingId }) => {
     { 
       id: '1', 
       url: 'https://images.unsplash.com/photo-1511367461989-f85a21fda167?auto=format&fit=crop&w=800&q=80', 
-      addedBy: 'Système', 
-      comment: 'Inspiration : Direction artistique Minimaliste',
+      addedBy: 'Direction Artistique', 
+      comment: 'Inspiration : Minimalisme & Texture',
       timestamp: Date.now()
     }
   ];
@@ -41,10 +41,9 @@ const MoodboardView: React.FC<{ bookingId: number }> = ({ bookingId }) => {
   };
 
   const removeItem = (id: string) => {
-    if (confirm("Supprimer cette inspiration du moodboard ?")) {
+    if (confirm("Supprimer cette référence ?")) {
         const newItems = items.filter(item => item.id !== id);
         updateMoodboard(bidStr, newItems);
-        trackAction('MOODBOARD_REMOVE_ITEM', { bookingId, itemId: id });
     }
   };
 
@@ -54,46 +53,48 @@ const MoodboardView: React.FC<{ bookingId: number }> = ({ bookingId }) => {
   };
 
   return (
-    <div className="flex flex-col h-full bg-[#0D1117] animate-view-transition">
-      <header className="p-5 border-b border-slate-800 flex justify-between items-center bg-slate-900/40 backdrop-blur-xl sticky top-0 z-20">
+    <div className="flex flex-col h-full bg-[#050B14] animate-view-transition">
+      <header className="p-6 border-b border-white/5 flex justify-between items-center bg-[#0D1625]/80 backdrop-blur-2xl sticky top-0 z-20">
         <div>
-            <h2 className="text-xl font-black text-white uppercase tracking-tighter flex items-center gap-2">
-                <Icon name="grid" className="w-5 h-5 text-purple-400" />
-                Moodboard Pro
+            <h2 className="text-xl font-black text-white uppercase tracking-tighter flex items-center gap-3">
+                <Icon name="grid" className="w-5 h-5 text-[#D2B48C]" />
+                Vision Collaborative
             </h2>
-            <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Vision partagée</p>
+            <p className="text-[10px] text-slate-500 font-bold uppercase tracking-[0.2em] mt-1">Espace créatif partagé</p>
         </div>
-        <div className="flex gap-2">
-            <button 
-              onClick={() => fileInputRef.current?.click()}
-              className="p-3 bg-slate-800 hover:bg-slate-700 rounded-2xl border border-slate-700 shadow-lg transition-all active:scale-90"
-            >
-              <Icon name="plusCircle" className="w-6 h-6 text-white" />
-            </button>
-        </div>
+        <button 
+          onClick={() => fileInputRef.current?.click()}
+          className="p-4 bg-white/5 hover:bg-white/10 rounded-2xl border border-white/10 shadow-xl transition-all active:scale-90"
+        >
+          <Icon name="plusCircle" className="w-6 h-6 text-[#D2B48C]" />
+        </button>
         <input type="file" ref={fileInputRef} onChange={handleAddItem} className="hidden" accept="image/*" />
       </header>
       
-      <div className="flex-1 overflow-y-auto p-6 custom-scrollbar pb-32">
+      <div className="flex-1 overflow-y-auto p-6 pb-32">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
             {items.map(item => (
-                <div key={item.id} className="bg-slate-900 rounded-[2rem] overflow-hidden border border-slate-800 group relative shadow-2xl">
-                    <div className="relative aspect-square overflow-hidden" onClick={() => setFullScreenMedia({ type: 'image', url: item.url })}>
-                        <img src={item.url} className="w-full h-full object-cover" alt="Inspiration" />
+                <div key={item.id} className="bg-[#0D1625] rounded-[3rem] overflow-hidden border border-white/5 group relative shadow-2xl hover:border-[#D2B48C]/20 transition-all">
+                    <div className="relative aspect-square overflow-hidden cursor-zoom-in" onClick={() => setFullScreenMedia({ type: 'image', url: item.url })}>
+                        <img src={item.url} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" alt="Reference" />
                         <button 
                             onClick={(e) => { e.stopPropagation(); removeItem(item.id); }}
-                            className="absolute top-4 right-4 p-2 bg-red-500/80 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity"
+                            className="absolute top-5 right-5 p-3 bg-red-500/80 backdrop-blur-md rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity"
                         >
                             <Icon name="close" className="w-4 h-4 text-white" />
                         </button>
                     </div>
-                    <div className="p-5">
+                    <div className="p-6">
                         <textarea 
                             value={item.comment}
                             onChange={(e) => updateComment(item.id, e.target.value)}
-                            placeholder="Note..."
-                            className="w-full bg-transparent text-sm text-slate-300 outline-none resize-none"
+                            placeholder="Notes artistiques..."
+                            className="w-full bg-transparent text-sm text-slate-300 outline-none resize-none font-medium leading-relaxed italic"
                         />
+                        <div className="mt-4 flex justify-between items-center pt-4 border-t border-white/5 text-[9px] font-black uppercase tracking-widest text-slate-600">
+                            <span>{item.addedBy}</span>
+                            <span>{new Date(item.timestamp).toLocaleDateString()}</span>
+                        </div>
                     </div>
                 </div>
             ))}
