@@ -4,7 +4,6 @@ import Icon from './Icon';
 import { useUser } from '../contexts/UserContext';
 import { useAppContext } from '../contexts/AppContext';
 import { generateVisualInspiration } from '../services/geminiService';
-/* Import MoodboardItem from types to resolve conflict with local interface and fix type mismatch errors */
 import type { MoodboardItem } from '../types';
 
 const MoodboardView: React.FC<{ bookingId: number }> = ({ bookingId }) => {
@@ -12,9 +11,7 @@ const MoodboardView: React.FC<{ bookingId: number }> = ({ bookingId }) => {
   const { setFullScreenMedia } = useAppContext();
   const fileInputRef = useRef<HTMLInputElement>(null);
   
-  // On récupère les items depuis le store global
   const bidStr = bookingId.toString();
-  /* Fix: Added missing timestamp to initial fallback items to match MoodboardItem interface */
   const items = moodboards[bidStr] || [
     { 
       id: '1', 
@@ -34,7 +31,6 @@ const MoodboardView: React.FC<{ bookingId: number }> = ({ bookingId }) => {
     if (file) {
       const reader = new FileReader();
       reader.onload = (event) => {
-        /* Fix: Added missing timestamp property to newItem to satisfy the MoodboardItem interface */
         const newItem: MoodboardItem = {
           id: Date.now().toString(),
           url: event.target?.result as string,
@@ -55,7 +51,6 @@ const MoodboardView: React.FC<{ bookingId: number }> = ({ bookingId }) => {
     try {
         const imageUrl = await generateVisualInspiration(aiPrompt);
         if (imageUrl) {
-            /* Fix: Added missing timestamp property to AI generated newItem */
             const newItem: MoodboardItem = {
                 id: Date.now().toString(),
                 url: imageUrl,
@@ -67,7 +62,12 @@ const MoodboardView: React.FC<{ bookingId: number }> = ({ bookingId }) => {
             setAiPrompt('');
             setIsAiPanelOpen(false);
             trackAction('MOODBOARD_AI_GENERATE', { prompt: aiPrompt });
+        } else {
+            alert("L'IA n'a pas pu générer l'image. Veuillez essayer un autre prompt.");
         }
+    } catch (err) {
+        console.error(err);
+        alert("Erreur de connexion avec le service Elite AI.");
     } finally {
         setIsGenerating(false);
     }
@@ -99,7 +99,7 @@ const MoodboardView: React.FC<{ bookingId: number }> = ({ bookingId }) => {
         <div className="flex gap-2">
             <button 
               onClick={() => setIsAiPanelOpen(!isAiPanelOpen)}
-              className="p-3 bg-purple-600/20 border border-purple-500/30 hover:bg-purple-600 hover:text-white rounded-2xl text-purple-400 transition-all active:scale-90"
+              className={`p-3 rounded-2xl transition-all active:scale-90 ${isAiPanelOpen ? 'bg-purple-600 text-white' : 'bg-purple-600/20 text-purple-400 border border-purple-500/30 hover:bg-purple-600/40'}`}
             >
               <Icon name="sparkles" className="w-6 h-6" />
             </button>
@@ -120,16 +120,20 @@ const MoodboardView: React.FC<{ bookingId: number }> = ({ bookingId }) => {
                     type="text" 
                     value={aiPrompt}
                     onChange={(e) => setAiPrompt(e.target.value)}
-                    placeholder="Ex: Futurisme, néons, ambiance studio..."
+                    placeholder="Futuriste, néons, ambiance studio..."
                     className="flex-1 bg-slate-950/50 border border-purple-500/20 rounded-2xl px-5 py-3 text-sm text-white outline-none"
                     onKeyDown={(e) => e.key === 'Enter' && handleAiGenerate()}
+                    disabled={isGenerating}
                 />
                 <button 
                     onClick={handleAiGenerate}
                     disabled={isGenerating || !aiPrompt.trim()}
-                    className="bg-purple-600 px-6 rounded-2xl font-black text-xs uppercase"
+                    className="bg-purple-600 hover:bg-purple-500 disabled:opacity-50 px-6 rounded-2xl font-black text-[10px] uppercase tracking-widest text-white flex items-center gap-2"
                 >
-                    {isGenerating ? '...' : 'Générer'}
+                    {isGenerating ? (
+                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    ) : null}
+                    {isGenerating ? 'Génération' : 'Générer'}
                 </button>
             </div>
         </div>

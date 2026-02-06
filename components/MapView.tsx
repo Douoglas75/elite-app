@@ -22,7 +22,6 @@ const MapView: React.FC<MapViewProps> = ({ filteredUsers }) => {
   const [activeLayer, setActiveLayer] = useState<'users' | 'spots'>('users');
   const [isLocating, setIsLocating] = useState(false);
 
-  // LOGIQUE CRITIQUE : Toujours inclure l'utilisateur actuel dans l'affichage de la carte
   const displayUsers = useMemo(() => {
     const list = filteredUsers || allUsers;
     const isMeInList = list.some(u => u.id === currentUser.id);
@@ -85,104 +84,15 @@ const MapView: React.FC<MapViewProps> = ({ filteredUsers }) => {
 
       const isMe = user.id === currentUser.id;
       
-      // Determine badges to show
-      const badges: string[] = [];
-      if (user.types?.includes(UserType.Photographer)) badges.push('PH');
-      if (user.types?.includes(UserType.Videographer)) badges.push('VD');
-      if (user.types?.includes(UserType.Model)) badges.push('MD');
+      const roleData: { label: string, color: string }[] = [];
+      if (user.types?.includes(UserType.Photographer)) roleData.push({ label: 'PH', color: 'bg-[#D2B48C]' });
+      if (user.types?.includes(UserType.Videographer)) roleData.push({ label: 'VD', color: 'bg-purple-500' });
+      if (user.types?.includes(UserType.Model)) roleData.push({ label: 'MD', color: 'bg-pink-500' });
 
-      // Colors based on roles - fallback to Elite gold if multiple
-      let colorClass = 'border-white';
-      let bgClass = 'bg-white';
-      
-      if (badges.length > 1) {
-          colorClass = 'border-[#D2B48C]';
-          bgClass = 'bg-[#D2B48C]';
-      } else if (user.types?.includes(UserType.Photographer)) {
-          colorClass = 'border-[#D2B48C]';
-          bgClass = 'bg-[#D2B48C]';
-      } else if (user.types?.includes(UserType.Videographer)) {
-          colorClass = 'border-purple-500';
-          bgClass = 'bg-purple-500';
-      } else if (user.types?.includes(UserType.Model)) {
-          colorClass = 'border-pink-500';
-          bgClass = 'bg-pink-500';
-      }
+      let borderColor = 'border-white';
+      if (isMe) borderColor = 'border-blue-500';
+      else if (roleData.length > 0) borderColor = roleData[0].color.replace('bg-', 'border-');
 
-      if (isMe) {
-          colorClass = 'border-blue-500';
-          bgClass = 'bg-blue-500';
-      }
-
-      const badgesHtml = badges.map((b, i) => `
-        <div class="absolute -bottom-1 right-${i * 3} w-4 h-4 ${bgClass} rounded-lg flex items-center justify-center border border-[#0D1625] shadow-md z-${10 - i}">
-            <div class="text-[6px] font-black text-[#0D1625] uppercase">${isMe && i === 0 ? 'ME' : b}</div>
-        </div>
-      `).join('');
-
-      const icon = L.divIcon({
-        html: `<div class="relative ${isMe ? 'z-[5000]' : ''} animate-scale-in">
-                 ${isMe ? `<div class="absolute -inset-4 bg-blue-500/20 rounded-full animate-ping"></div>` : ''}
-                 ${user.isAvailableNow ? `<div class="absolute -inset-2 ${isMe ? 'bg-blue-500/30' : 'bg-red-500/20'} rounded-full animate-pulse"></div>` : ''}
-                 <div class="w-10 h-10 rounded-2xl border-2 ${colorClass} bg-[#0D1625] overflow-hidden shadow-2xl transition-all ${isMe ? 'ring-4 ring-blue-500/30' : ''}">
-                   <img src="${user.avatarUrl}" class="w-full h-full object-cover" />
-                 </div>
-                 ${badgesHtml}
-               </div>`,
-        className: '', iconSize: [40, 40], iconAnchor: [20, 20]
-      });
-
-      const marker = L.marker([user.location.lat, user.location.lng], { 
-        icon, 
-        zIndexOffset: isMe ? 10000 : 0 
-      }).addTo(userLayer);
-
-      marker.on('mousedown touchstart', (e: any) => {
-          L.DomEvent.stopPropagation(e);
-          if (!isMe) viewProfile(user);
-      });
-    });
-  }, [displayUsers, currentUser, viewProfile]);
-
-  const handleLiveLocate = async () => {
-    if (isLocating) return;
-    setIsLocating(true);
-    try {
-        const newCoords = await refreshLocation();
-        if (mapInstanceRef.current) {
-            mapInstanceRef.current.flyTo([newCoords.lat, newCoords.lng], 15, { duration: 1.5 });
-        }
-    } catch (err) {
-        alert("Activez la géolocalisation dans vos paramètres système pour cette fonctionnalité.");
-    } finally {
-        setTimeout(() => setIsLocating(false), 2000);
-    }
-  };
-
-  return (
-    <div className="relative w-full h-full bg-[#050B14] overflow-hidden">
-      <div ref={mapContainerRef} className="w-full h-full z-0" />
-      
-      {/* HUD Overlay */}
-      <div className="absolute inset-0 z-[500] pointer-events-none flex flex-col justify-between p-4 md:p-6 pb-24 md:pb-8">
-        <div className="flex justify-center">
-          <div className="bg-[#050B14]/90 backdrop-blur-xl p-1 rounded-2xl border border-white/10 shadow-2xl flex gap-1 pointer-events-auto">
-              <button onClick={() => setActiveLayer('users')} className={`px-6 py-2 rounded-xl text-[10px] font-black tracking-widest transition-all uppercase whitespace-nowrap ${activeLayer === 'users' ? 'bg-[#D2B48C] text-[#050B14]' : 'text-slate-400'}`}>TALENTS</button>
-              <button onClick={() => setActiveLayer('spots')} className={`px-6 py-2 rounded-xl text-[10px] font-black tracking-widest transition-all uppercase whitespace-nowrap ${activeLayer === 'spots' ? 'bg-[#D2B48C] text-[#050B14]' : 'text-slate-400'}`}>SPOTS</button>
-          </div>
-        </div>
-
-        <div className="flex justify-end items-end">
-            <button 
-              onClick={handleLiveLocate}
-              className={`w-14 h-14 rounded-2xl flex items-center justify-center shadow-2xl active:scale-90 transition-all pointer-events-auto ${isLocating ? 'bg-blue-500 text-white animate-pulse' : 'bg-white text-[#050B14]'}`}
-            >
-              <Icon name={isLocating ? "bolt" : "locationMarker"} className="w-7 h-7" />
-            </button>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-export default memo(MapView);
+      const badgesHtml = roleData.map((role, i) => `
+        <div class="absolute -bottom-1 -right-${i * 3} w-4 h-4 ${role.color} rounded-lg flex items-center justify-center border border-[#0D1625] shadow-md z-${10 - i} transition-all">
+            <div class="text-[6px] font-black text-white uppercase">${isMe && i === 0 ? 'ME' : role.label}</div>

@@ -1,3 +1,4 @@
+
 import { GoogleGenAI, Type } from "@google/genai";
 import type { User, AISuggestion, QuizQuestion } from '../types';
 
@@ -31,15 +32,23 @@ export const generateVisualInspiration = async (prompt: string): Promise<string 
     const response = await ai.models.generateContent({
       model: 'gemini-2.5-flash-image',
       contents: {
-        parts: [{ text: `Generate a high-quality professional photography inspiration image for a moodboard. Theme: ${prompt}. Professional lighting, aesthetic composition.` }]
+        parts: [{ text: `High-quality professional artistic photography inspiration for a moodboard. Theme: ${prompt}. Cinematic lighting, professional aesthetic, detailed textures, masterpiece.` }]
       },
       config: {
         imageConfig: { aspectRatio: "1:1" }
       }
     });
 
-    const part = response.candidates?.[0]?.content?.parts.find(p => p.inlineData);
-    return part?.inlineData ? `data:${part.inlineData.mimeType};base64,${part.inlineData.data}` : null;
+    // Recherche récursive de l'image dans les parts de la réponse
+    const candidates = response.candidates;
+    if (candidates && candidates.length > 0) {
+      for (const part of candidates[0].content.parts) {
+        if (part.inlineData) {
+          return `data:${part.inlineData.mimeType};base64,${part.inlineData.data}`;
+        }
+      }
+    }
+    return null;
   } catch (error) {
     console.error("Image Generation Error:", error);
     return null;
@@ -86,8 +95,15 @@ export const applyAIRetouch = async (imageData: string): Promise<string> => {
       }
     });
     
-    const part = response.candidates?.[0]?.content?.parts.find(p => p.inlineData);
-    return part?.inlineData ? `data:${part.inlineData.mimeType};base64,${part.inlineData.data}` : imageData;
+    const candidates = response.candidates;
+    if (candidates && candidates.length > 0) {
+      for (const part of candidates[0].content.parts) {
+        if (part.inlineData) {
+          return `data:${part.inlineData.mimeType};base64,${part.inlineData.data}`;
+        }
+      }
+    }
+    return imageData;
   } catch (error) {
     return imageData;
   }
@@ -130,7 +146,6 @@ export const getAICollaborationSuggestions = async (currentUser: User, viewedUse
   try {
     const response = await ai.models.generateContent({
       model: "gemini-3-pro-preview",
-      // Fix: User type has 'types' (array) instead of 'type'
       contents: `Pourquoi un ${currentUser.types.join('/')} et un ${viewedUser.types.join('/')} devraient collaborer ?`,
       config: {
         responseMimeType: "application/json",

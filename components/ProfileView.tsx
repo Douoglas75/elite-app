@@ -3,7 +3,7 @@ import React, { useRef, memo, useState } from 'react';
 import Icon from './Icon';
 import { useUser } from '../contexts/UserContext';
 import { useAppContext } from '../contexts/AppContext';
-import type { PortfolioItem } from '../types';
+import { UserType, type PortfolioItem } from '../types';
 
 const ProfileView: React.FC = () => {
   const { currentUser: user, logout, updateCurrentUser } = useUser();
@@ -13,6 +13,17 @@ const ProfileView: React.FC = () => {
 
   const toggleLive = () => {
     updateCurrentUser({ isAvailableNow: !user.isAvailableNow });
+  };
+
+  const toggleRole = (role: UserType) => {
+    const currentRoles = user.types || [];
+    const newRoles = currentRoles.includes(role)
+        ? currentRoles.filter(r => r !== role)
+        : [...currentRoles, role];
+    
+    // On force au moins un rôle
+    if (newRoles.length === 0) return;
+    updateCurrentUser({ types: newRoles });
   };
 
   const handleResetApp = () => {
@@ -51,12 +62,11 @@ const ProfileView: React.FC = () => {
             });
         }
 
-        // Mise à jour immédiate et persistante
         const updatedPortfolio = [...(user.portfolio || []), ...newItems];
         updateCurrentUser({ portfolio: updatedPortfolio });
     } catch (err) {
         console.error("Upload Error:", err);
-        alert("Certains fichiers sont trop lourds pour le stockage local (limite 5Mo).");
+        alert("Certains fichiers sont trop lourds pour le stockage local.");
     } finally {
         setIsUploading(false);
         if (mediaInputRef.current) mediaInputRef.current.value = '';
@@ -86,10 +96,40 @@ const ProfileView: React.FC = () => {
           </div>
           <h2 className="mt-4 text-2xl font-black text-white uppercase tracking-tight">{user.name}</h2>
           <p className="text-slate-500 text-sm font-bold uppercase tracking-widest opacity-60">{user.headline}</p>
+          
           <div className="flex gap-2 mt-4">
-            <button onClick={() => setEditingProfile(true)} className="px-6 py-2 bg-[#1A2536] border border-white/10 rounded-xl text-[10px] font-black text-[#D2B48C] hover:bg-[#253247] transition-all uppercase tracking-widest">Modifier Profil</button>
+            <button onClick={() => setEditingProfile(true)} className="px-6 py-2 bg-[#1A2536] border border-white/10 rounded-xl text-[10px] font-black text-[#D2B48C] hover:bg-[#253247] transition-all uppercase tracking-widest">Détails Bio</button>
           </div>
         </div>
+
+        {/* Section Spécialités Multi-choix */}
+        <section className="bg-[#0D1625] p-5 rounded-[2.5rem] border border-white/5 space-y-4">
+            <div className="flex items-center gap-2 mb-2">
+                <Icon name="sparkles" className="w-4 h-4 text-[#D2B48C]" />
+                <h3 className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Mes Spécialités (Carte)</h3>
+            </div>
+            <div className="grid grid-cols-3 gap-2">
+                {[UserType.Photographer, UserType.Videographer, UserType.Model].map(role => {
+                    const isActive = user.types?.includes(role);
+                    return (
+                        <button
+                            key={role}
+                            onClick={() => toggleRole(role)}
+                            className={`py-3 rounded-2xl border transition-all text-[9px] font-black uppercase tracking-tighter ${
+                                isActive 
+                                ? 'bg-[#D2B48C] border-[#D2B48C] text-[#050B14] shadow-lg shadow-[#D2B48C]/20' 
+                                : 'bg-[#1A2536] border-white/10 text-slate-500 hover:border-white/30'
+                            }`}
+                        >
+                            {role === UserType.Photographer ? 'Photo' : role === UserType.Videographer ? 'Vidéo' : 'Modèle'}
+                        </button>
+                    )
+                })}
+            </div>
+            <p className="text-[8px] text-slate-600 font-bold uppercase text-center mt-2 tracking-widest">
+                Sélectionnez vos rôles pour apparaître sur la carte
+            </p>
+        </section>
 
         {user.isPro && (
             <div className={`p-5 rounded-2xl border transition-all flex items-center justify-between ${user.isAvailableNow ? 'bg-red-600/10 border-red-500/30 shadow-[0_0_20px_rgba(239,68,68,0.1)]' : 'bg-[#1A2536] border-white/5'}`}>
