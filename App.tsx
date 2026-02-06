@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState, useMemo } from 'react';
 import UserProfileCard from './components/UserProfileCard';
 import QuizModal from './components/QuizModal';
@@ -21,7 +22,6 @@ import EditProfileScreen from './components/EditProfileScreen';
 import SubViewScreen from './components/SubViewScreen';
 import GuidedTour from './components/GuidedTour';
 import PaymentScreen from './components/PaymentScreen';
-import SOSButton from './components/SOSButton';
 import MoodboardView from './components/MoodboardView';
 import GalleryView from './components/GalleryView';
 import Layout from './components/Layout';
@@ -56,7 +56,6 @@ const App: React.FC = () => {
 
   const filteredUsers = useMemo(() => {
     return users.filter(user => {
-      // On affiche l'utilisateur actuel sur la carte/liste s'il correspond aux filtres
       const matchesType = filterType === 'All' || user.type === filterType;
       const matchesAvailability = !filterAvailable || user.isAvailableNow;
       const matchesSearch = searchQuery.trim() === '' || 
@@ -65,7 +64,7 @@ const App: React.FC = () => {
       
       return matchesType && matchesAvailability && matchesSearch;
     });
-  }, [users, currentUser.id, filterType, filterAvailable, searchQuery]);
+  }, [users, filterType, filterAvailable, searchQuery]);
 
   if (!isLoggedIn) return <LoginScreen />;
   if (!isProfileComplete) return <InitialSetupScreen />;
@@ -166,7 +165,6 @@ const App: React.FC = () => {
   return (
     <>
       <Layout>{renderContent()}</Layout>
-      <SOSButton />
       {showQuizNotify && !isQuizOpen && (
         <QuizNotificationPopup 
           onStartQuiz={() => { setQuizOpen(true); setShowQuizNotify(false); }} 

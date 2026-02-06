@@ -12,14 +12,13 @@ interface MapViewProps {
 }
 
 const MapView: React.FC<MapViewProps> = ({ filteredUsers }) => {
-  const { users: allUsers, currentUser, refreshLocation } = useUser();
+  const { users: allUsers, currentUser } = useUser();
   const { viewProfile } = useAppContext();
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<any>(null);
   const userLayerRef = useRef<any>(null);
   
   const [activeLayer, setActiveLayer] = useState<'users' | 'spots'>('users');
-  const [isLocating, setIsLocating] = useState(false);
 
   const displayUsers = filteredUsers || allUsers;
 
@@ -45,7 +44,6 @@ const MapView: React.FC<MapViewProps> = ({ filteredUsers }) => {
 
             userLayerRef.current = L.layerGroup().addTo(map);
             
-            // Correction forcée de la taille
             setTimeout(() => {
               if (mapInstanceRef.current) mapInstanceRef.current.invalidateSize();
             }, 250);
@@ -102,23 +100,10 @@ const MapView: React.FC<MapViewProps> = ({ filteredUsers }) => {
     });
   }, [displayUsers, currentUser, viewProfile]);
 
-  const handleBroadcastLocation = async () => {
-    setIsLocating(true);
-    try {
-        await refreshLocation();
-        mapInstanceRef.current?.flyTo([currentUser.location.lat, currentUser.location.lng], 15);
-    } catch (err) {
-        console.error(err);
-    } finally {
-        setTimeout(() => setIsLocating(false), 800);
-    }
-  };
-
   return (
     <div className="relative w-full h-full bg-[#050B14] overflow-hidden">
       <div ref={mapContainerRef} className="w-full h-full z-0" />
       
-      {/* Overlay controls avec pointer-events-none sur le parent */}
       <div className="absolute inset-0 z-[500] pointer-events-none flex flex-col justify-between p-4 md:p-6 pb-24 md:pb-8">
         <div className="flex justify-center">
           <div className="bg-[#050B14]/90 backdrop-blur-xl p-1 rounded-2xl border border-white/10 shadow-2xl flex gap-1 pointer-events-auto">
@@ -127,16 +112,7 @@ const MapView: React.FC<MapViewProps> = ({ filteredUsers }) => {
           </div>
         </div>
 
-        <div className="flex justify-between items-end">
-            <button 
-              onClick={handleBroadcastLocation}
-              disabled={isLocating}
-              className={`h-14 px-6 rounded-2xl border flex items-center gap-3 shadow-2xl transition-all active:scale-95 pointer-events-auto ${isLocating ? 'bg-blue-500/20 border-blue-500 text-blue-400' : 'bg-[#050B14] border-blue-500/30 text-white hover:bg-[#0D1625]'}`}
-            >
-              {isLocating ? <div className="w-4 h-4 border-2 border-blue-400 border-t-transparent rounded-full animate-spin" /> : <div className="w-2.5 h-2.5 bg-blue-500 rounded-full animate-pulse" />}
-              <span className="text-[10px] font-black uppercase tracking-widest">{isLocating ? 'SYNC...' : 'SIGNAL SOS'}</span>
-            </button>
-
+        <div className="flex justify-end items-end">
             <button 
               onClick={() => mapInstanceRef.current?.flyTo([currentUser.location.lat, currentUser.location.lng], 15)} 
               className="w-14 h-14 bg-white border border-black/5 rounded-2xl flex items-center justify-center text-[#050B14] shadow-2xl active:scale-90 transition-all pointer-events-auto"
