@@ -1,7 +1,6 @@
-
 import React, { createContext, useState, useContext, ReactNode, useCallback, useMemo, useEffect } from 'react';
 import { MOCK_USERS, MOCK_MESSAGES, MOCK_BOOKINGS, CURRENT_USER } from '../constants';
-import type { User, Booking, MessageThread, Review, UserType, ChatMessage } from '../types';
+import type { User, Booking, MessageThread, Review, UserType } from '../types';
 
 interface UserContextType {
   isLoggedIn: boolean;
@@ -12,13 +11,11 @@ interface UserContextType {
   currentUser: User;
   analyticsLog: any[];
 
-  // Auth & Database logic
   login: (email: string, pass: string) => Promise<boolean>;
   register: (name: string, email: string, type: UserType) => Promise<void>;
   logout: () => void;
   completeInitialSetup: (data: { name: string; type: UserType }) => { startTour: boolean };
   
-  // Action Handlers
   updateCurrentUser: (updatedData: Partial<User>) => void;
   saveProfile: (updatedUser: User) => void;
   startChat: (userId: number) => number;
@@ -27,12 +24,12 @@ interface UserContextType {
   updateBookingStatus: (id: number, status: any) => void;
   postReview: (booking: Booking, review: any) => void;
   trackAction: (action: string, metadata: any) => void;
+  refreshLocation: () => Promise<void>;
 }
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
 
 export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  // DB & Session Recovery
   const [isLoggedIn, setIsLoggedIn] = useState(() => localStorage.getItem('elite_session') === 'active');
   const [isProfileComplete, setProfileComplete] = useState(() => localStorage.getItem('elite_onboarded') === 'true');
   
@@ -58,7 +55,17 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     JSON.parse(localStorage.getItem('elite_analytics') || '[]')
   );
 
-  // Database Syncing Logic
+  // Synchronisation stricte : On s'assure que le currentUser est TOUJOURS dans la liste des users
+  useEffect(() => {
+    setUsers(prev => {
+        const index = prev.findIndex(u => u.id === currentUser.id);
+        if (index === -1) return [...prev, currentUser];
+        const newUsers = [...prev];
+        newUsers[index] = currentUser;
+        return newUsers;
+    });
+  }, [currentUser.id]); // Uniquement sur l'ID au départ
+
   useEffect(() => {
     localStorage.setItem('elite_db_users', JSON.stringify(users));
     localStorage.setItem('elite_db_msgs', JSON.stringify(messages));
@@ -71,18 +78,40 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const trackAction = useCallback((action: string, metadata: any) => {
     const entry = { ts: new Date().toISOString(), action, metadata, uid: currentUser.id };
-    setAnalyticsLog(prev => [...prev.slice(-49), entry]); // On garde 50 logs max
-    console.debug(`[Elite Harvesting] ${action}`, metadata);
+    setAnalyticsLog(prev => [...prev.slice(-49), entry]);
   }, [currentUser.id]);
 
+  const updateCurrentUser = useCallback((data: Partial<User>) => {
+    setCurrentUser(prev => {
+        const updated = { ...prev, ...data };
+        // On met aussi à jour la liste globale immédiatement pour la carte
+        setUsers(uPrev => uPrev.map(u => u.id === prev.id ? updated : u));
+        return updated;
+    });
+    trackAction('USER_UPDATE', data);
+  }, [trackAction]);
+
+  const refreshLocation = useCallback(async () => {
+    return new Promise<void>((resolve, reject) => {
+        navigator.geolocation.getCurrentPosition(
+            (pos) => {
+                updateCurrentUser({ 
+                    location: { lat: pos.coords.latitude, lng: pos.coords.longitude } 
+                });
+                resolve();
+            },
+            (err) => reject(err),
+            { enableHighAccuracy: true }
+        );
+    });
+  }, [updateCurrentUser]);
+
   const login = useCallback(async (email: string, pass: string): Promise<boolean> => {
-    await new Promise(r => setTimeout(r, 600)); // Simule latence réseau
+    await new Promise(r => setTimeout(r, 600));
     
-    // Test Account Bypass
     if (email === "test@elite.com" || email === "admin@elite.com") {
       setIsLoggedIn(true);
       setProfileComplete(true);
-      trackAction('LOGIN_SUCCESS', { email });
       return true;
     }
 
@@ -91,54 +120,38 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       setCurrentUser(user);
       setIsLoggedIn(true);
       setProfileComplete(true);
-      trackAction('LOGIN_SUCCESS', { email });
       return true;
     }
-
-    trackAction('LOGIN_FAILED', { email });
     return false;
-  }, [users, trackAction]);
+  }, [users]);
 
   const register = useCallback(async (name: string, email: string, type: UserType) => {
-    await new Promise(r => setTimeout(r, 800));
-    const newUser = { ...CURRENT_USER, id: Date.now(), name, email, type, bio: "Nouveau membre Elite." };
-    setUsers(prev => [...prev, newUser]);
+    const newUser = { ...CURRENT_USER, id: Date.now(), name, email, type, avatarUrl: `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=D2B48C&color=050B14` };
     setCurrentUser(newUser);
+    setUsers(prev => [...prev, newUser]);
     setIsLoggedIn(true);
     setProfileComplete(false);
-    trackAction('USER_REGISTERED', { email, type });
-  }, [trackAction]);
+  }, []);
 
   const completeInitialSetup = useCallback((data: { name: string; type: UserType }) => {
-    const updated = { 
-        ...currentUser, 
-        name: data.name, 
-        type: data.type, 
-        headline: `${data.type} Junior`,
-        isPro: false 
-    };
+    const updated = { ...currentUser, ...data, isPro: true };
     setCurrentUser(updated);
+    setUsers(prev => prev.map(u => u.id === currentUser.id ? updated : u));
     setProfileComplete(true);
-    trackAction('ONBOARDING_COMPLETED', data);
     return { startTour: true };
-  }, [currentUser, trackAction]);
+  }, [currentUser]);
 
   const logout = useCallback(() => {
-    trackAction('LOGOUT', { uid: currentUser.id });
-    localStorage.clear();
+    localStorage.removeItem('elite_session');
+    localStorage.removeItem('elite_active_user');
     window.location.reload();
-  }, [currentUser.id, trackAction]);
-
-  const updateCurrentUser = useCallback((data: Partial<User>) => {
-    setCurrentUser(prev => ({ ...prev, ...data }));
-    trackAction('USER_UPDATE', data);
-  }, [trackAction]);
+  }, []);
 
   const saveProfile = useCallback((user: User) => {
     setCurrentUser(user);
+    setUsers(prev => prev.map(u => u.id === user.id ? user : u));
     setProfileComplete(true);
-    trackAction('PROFILE_SAVED', { uid: user.id });
-  }, [trackAction]);
+  }, []);
 
   const startChat = useCallback((userId: number) => {
     const existing = messages.find(t => t.participantId === userId);
@@ -146,39 +159,34 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const tid = Date.now();
     const newThread = { id: tid, participantId: userId, messages: [], lastMessage: "", timestamp: "Maintenant", unread: false };
     setMessages(prev => [newThread, ...prev]);
-    trackAction('CHAT_INITIATED', { target: userId });
     return tid;
-  }, [messages, trackAction]);
+  }, [messages]);
 
   const addMessage = useCallback((threadId: number, text: string) => {
     const msg = { id: Date.now(), senderId: currentUser.id, text, timestamp: new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }) };
     setMessages(prev => prev.map(t => t.id === threadId ? { ...t, messages: [...t.messages, msg], lastMessage: text } : t));
-    trackAction('MESSAGE_SENT', { threadId });
-  }, [currentUser.id, trackAction]);
+  }, [currentUser.id]);
 
   const confirmBooking = useCallback((details: any) => {
     const bid = Date.now();
     const b = { id: bid, clientId: currentUser.id, status: 'Pending', escrowStatus: 'held', ...details };
     setBookings(prev => [b, ...prev]);
-    trackAction('BOOKING_CREATED', { bid });
-  }, [currentUser.id, trackAction]);
+  }, [currentUser.id]);
 
   const updateBookingStatus = useCallback((id: number, status: any) => {
     setBookings(prev => prev.map(b => b.id === id ? { ...b, status } : b));
-    trackAction('BOOKING_STATUS_UPDATE', { id, status });
-  }, [trackAction]);
+  }, []);
 
   const postReview = useCallback((booking: Booking, review: any) => {
     setUsers(prev => prev.map(u => u.id === booking.professionalId ? { ...u, reviews: [...(u.reviews || []), { ...review, id: Date.now(), authorId: currentUser.id }] } : u));
     updateBookingStatus(booking.id, 'Completed');
-    trackAction('REVIEW_POSTED', { target: booking.professionalId });
-  }, [currentUser.id, updateBookingStatus, trackAction]);
+  }, [currentUser.id, updateBookingStatus]);
 
   const contextValue = useMemo(() => ({
     isLoggedIn, isProfileComplete, users, messages, bookings, currentUser, analyticsLog,
     login, register, logout, completeInitialSetup, updateCurrentUser, saveProfile, startChat, addMessage,
-    confirmBooking, updateBookingStatus, postReview, trackAction
-  }), [isLoggedIn, isProfileComplete, users, messages, bookings, currentUser, analyticsLog, login, register, logout, completeInitialSetup, updateCurrentUser, saveProfile, startChat, addMessage, confirmBooking, updateBookingStatus, postReview, trackAction]);
+    confirmBooking, updateBookingStatus, postReview, trackAction, refreshLocation
+  }), [isLoggedIn, isProfileComplete, users, messages, bookings, currentUser, analyticsLog, login, register, logout, completeInitialSetup, updateCurrentUser, saveProfile, startChat, addMessage, confirmBooking, updateBookingStatus, postReview, trackAction, refreshLocation]);
 
   return <UserContext.Provider value={contextValue}>{children}</UserContext.Provider>;
 };
