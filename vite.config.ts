@@ -7,7 +7,6 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 export default defineConfig(({ mode }) => {
-  // Use __dirname instead of process.cwd() to fix the "Property 'cwd' does not exist on type 'Process'" error
   const env = loadEnv(mode, __dirname, '');
   
   return {
@@ -21,9 +20,18 @@ export default defineConfig(({ mode }) => {
     build: {
       outDir: 'dist',
       emptyOutDir: true,
+      chunkSizeWarningLimit: 1000, // Augmente la limite à 1Mo pour supprimer l'alerte
       rollupOptions: {
         input: {
           main: path.resolve(__dirname, 'index.html')
+        },
+        output: {
+          // Sépare les grosses bibliothèques pour un chargement plus rapide (Manual Chunking)
+          manualChunks: {
+            'vendor-react': ['react', 'react-dom'],
+            'vendor-ai': ['@google/genai'],
+            // Note: leaflet est chargé via CDN dans index.html donc pas besoin de le chunker ici
+          }
         }
       }
     }
