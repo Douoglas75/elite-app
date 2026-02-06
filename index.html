@@ -2,7 +2,7 @@
 <html lang="fr">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no" />
     <meta name="theme-color" content="#050B14" />
     <title>Find Photographer Elite</title>
     <link rel="manifest" href="/manifest.json">
@@ -12,16 +12,37 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
-      :root { --elite-gold: #D2B48C; --elite-navy: #050B14; }
-      body { font-family: 'Inter', sans-serif; background-color: var(--elite-navy); margin: 0; color: white; overflow-x: hidden; }
-      #root { height: 100vh; width: 100%; }
+      :root { 
+        --elite-gold: #D2B48C; 
+        --elite-navy: #050B14; 
+        --elite-bg: #050B14;
+      }
+      * { -webkit-tap-highlight-color: transparent; }
+      html, body { 
+        margin: 0; 
+        padding: 0; 
+        height: 100%; 
+        width: 100%; 
+        overflow: hidden; 
+        background-color: var(--elite-bg);
+        font-family: 'Inter', sans-serif;
+        color: white;
+      }
+      #root { 
+        height: 100%; 
+        width: 100%; 
+        display: flex;
+        flex-direction: column;
+      }
       .leaflet-container { background: var(--elite-navy) !important; }
       
-      /* Custom Scrollbar */
-      ::-webkit-scrollbar { width: 4px; }
-      ::-webkit-scrollbar-track { background: #050B14; }
-      ::-webkit-scrollbar-thumb { background: #1A2536; border-radius: 10px; }
-      ::-webkit-scrollbar-thumb:hover { background: #D2B48C; }
+      /* Custom Scrollbar hide for mobile */
+      .no-scrollbar::-webkit-scrollbar { display: none; }
+      .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+      /* Safe area support */
+      .pb-safe { padding-bottom: env(safe-area-inset-bottom); }
+      .pt-safe { padding-top: env(safe-area-inset-top); }
     </style>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script type="importmap">

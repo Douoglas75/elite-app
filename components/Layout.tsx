@@ -1,4 +1,3 @@
-
 import React from 'react';
 import Logo from './Logo';
 import Icon from './Icon';
@@ -16,8 +15,7 @@ const SideNavItem: React.FC<{ tab: ActiveTab; icon: IconName; label: string; tou
       <button
         data-tour={tourId}
         onClick={() => selectTab(tab)}
-        className={`flex items-center gap-4 w-full px-5 py-3.5 rounded-xl duration-200 group ${isActive ? 'bg-[#E1C699]/10 text-[#E1C699]' : 'text-slate-400 hover:bg-white/5 hover:text-slate-100'}`}
-        aria-current={isActive ? 'page' : undefined}
+        className={`flex items-center gap-4 w-full px-5 py-3.5 rounded-xl duration-200 group ${isActive ? 'bg-[#D2B48C]/10 text-[#D2B48C]' : 'text-slate-400 hover:bg-white/5 hover:text-slate-100'}`}
       >
         <Icon name={icon} className={`w-5 h-5 transition-transform duration-300 ${isActive ? 'scale-110' : 'group-hover:scale-110'}`} />
         <span className="font-bold text-sm uppercase tracking-widest">{label}</span>
@@ -32,12 +30,11 @@ const BottomNavItem: React.FC<{ tab: ActiveTab; icon: IconName; label: string; t
       <button
         data-tour={tourId}
         onClick={() => selectTab(tab)}
-        className="flex flex-col items-center justify-center gap-1 w-full h-full relative"
-        aria-current={isActive ? 'page' : undefined}
+        className="flex flex-col items-center justify-center gap-1 w-full h-full relative outline-none"
       >
-        <Icon name={icon} className={`w-6 h-6 duration-300 ${isActive ? 'text-[#E1C699] -translate-y-1' : 'text-slate-500'}`} />
-        <span className={`text-[10px] font-black uppercase tracking-tighter duration-300 ${isActive ? 'text-[#E1C699] opacity-100' : 'text-slate-500 opacity-60'}`}>{label}</span>
-        {isActive && <div className="absolute bottom-2 w-1.5 h-1.5 rounded-full bg-[#E1C699] shadow-[0_0_8px_rgba(225,198,153,0.8)]"></div>}
+        <Icon name={icon} className={`w-6 h-6 duration-300 ${isActive ? 'text-[#D2B48C] -translate-y-1' : 'text-slate-500'}`} />
+        <span className={`text-[9px] font-black uppercase tracking-tighter duration-300 ${isActive ? 'text-[#D2B48C] opacity-100' : 'text-slate-500 opacity-60'}`}>{label}</span>
+        {isActive && <div className="absolute bottom-2 w-1.5 h-1.5 rounded-full bg-[#D2B48C] shadow-[0_0_8px_rgba(210,180,140,0.8)]"></div>}
       </button>
     );
 };
@@ -47,9 +44,9 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     const showNavBar = !viewingUser && !activeChatThreadId && !activeSubView;
 
     return (
-        <div id="app-container" className="h-full bg-[#050B14] text-white md:grid md:grid-cols-[280px_1fr]">
+        <div className="h-full w-full bg-[#050B14] flex flex-col md:flex-row overflow-hidden">
             {/* Sidebar Desktop */}
-            <aside className="h-full bg-[#0D1625]/95 flex-col p-6 border-r border-white/5 hidden md:flex backdrop-blur-xl">
+            <aside className="h-full bg-[#0D1625]/95 w-[280px] flex-col p-6 border-r border-white/5 hidden md:flex backdrop-blur-xl">
                 <div className="mb-12 px-2">
                     <Logo className="h-10" />
                 </div>
@@ -60,27 +57,17 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                     <SideNavItem tab="bookings" icon="calendar" label="Réservations" tourId="bookings-tab" />
                     <SideNavItem tab="profile" icon="user" label="Profil" tourId="profile-tab" />
                 </nav>
-                
-                <div className="mt-auto p-4 bg-white/5 rounded-2xl border border-white/5">
-                    <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Status</p>
-                    <div className="flex items-center gap-2">
-                        <div className="w-2 h-2 bg-[#E1C699] rounded-full animate-pulse shadow-[0_0_8px_#E1C699]"></div>
-                        <span className="text-xs font-bold text-slate-300">Reseau Elite Actif</span>
-                    </div>
-                </div>
             </aside>
 
-            {/* Main Wrapper */}
-            <div className="h-full flex flex-col relative overflow-hidden">
-                <main className="flex-1 relative overflow-hidden">
-                    <div className="absolute inset-0 overflow-hidden">
-                        {children}
-                    </div>
+            {/* Main Content Area */}
+            <div className="flex-1 flex flex-col relative overflow-hidden h-full">
+                <main className="flex-1 overflow-hidden relative">
+                    {children}
                 </main>
                 
-                {/* Mobile Bottom Nav */}
+                {/* Mobile Bottom Nav - STRICTLY FIXED */}
                 {showNavBar && (
-                    <nav className="absolute bottom-0 left-0 right-0 bg-[#0D1625]/95 backdrop-blur-xl border-t border-white/5 grid grid-cols-5 h-20 px-2 z-[1000] md:hidden mobile-bottom-nav">
+                    <nav className="fixed bottom-0 left-0 right-0 bg-[#0D1625]/90 backdrop-blur-2xl border-t border-white/5 h-[84px] pb-[env(safe-area-inset-bottom)] px-2 z-[1000] md:hidden flex justify-around items-center">
                         <BottomNavItem tab="discover" icon="search" label="Explorer" />
                         <BottomNavItem tab="favorites" icon="heart" label="Favoris" />
                         <BottomNavItem tab="messages" icon="message" label="Chats" />
