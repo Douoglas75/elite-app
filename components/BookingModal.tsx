@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo } from 'react';
 import type { User } from '../types';
 import Icon from './Icon';
@@ -68,24 +67,23 @@ const BookingModal: React.FC<BookingModalProps> = ({ user }) => {
     switch (step) {
       case 'date':
         return (
-          <div className="p-4">
-            <h3 className="text-lg font-bold mb-4 text-center">Choisissez une date</h3>
-            <div className="grid grid-cols-5 gap-2 max-h-80 overflow-y-auto no-scrollbar p-1">
+          <div className="p-5 overflow-y-auto max-h-[60dvh] no-scrollbar">
+            <h3 className="text-sm font-black text-white uppercase tracking-widest text-center mb-6">Sélectionnez une date</h3>
+            <div className="grid grid-cols-4 gap-2">
               {next30Days.map((date, idx) => (
                 <button
                   key={idx}
                   onClick={() => handleDateSelect(date)}
-                  className={`flex flex-col items-center justify-center p-3 rounded-xl border transition-all ${
+                  className={`flex flex-col items-center justify-center p-4 rounded-2xl border transition-all ${
                     selectedDate?.toDateString() === date.toDateString() 
-                    ? 'bg-cyan-600 border-cyan-400 text-white' 
-                    : 'bg-gray-800 border-gray-700 text-gray-400 hover:border-cyan-500/50'
+                    ? 'bg-[#D2B48C] border-[#D2B48C] text-[#050B14]' 
+                    : 'bg-[#1A2536] border-white/5 text-slate-400 hover:border-[#D2B48C]/50'
                   }`}
                 >
-                  <span className="text-[10px] uppercase font-bold opacity-70">
+                  <span className="text-[8px] uppercase font-black opacity-60">
                     {date.toLocaleDateString('fr-FR', { weekday: 'short' })}
                   </span>
                   <span className="text-lg font-black">{date.getDate()}</span>
-                  <span className="text-[10px] uppercase">{date.toLocaleDateString('fr-FR', { month: 'short' })}</span>
                 </button>
               ))}
             </div>
@@ -94,22 +92,24 @@ const BookingModal: React.FC<BookingModalProps> = ({ user }) => {
       case 'time':
         return (
           <div className="p-6">
-            <button onClick={() => setStep('date')} className="text-xs text-cyan-400 mb-4 flex items-center gap-1">&larr; Modifier la date</button>
-            <h3 className="text-xl font-bold mb-4 text-center">Créneau de shooting</h3>
+            <button onClick={() => setStep('date')} className="text-[10px] font-black text-[#D2B48C] uppercase tracking-widest mb-6 flex items-center gap-2">
+              <Icon name="chevronRight" className="w-3 h-3 rotate-180" /> Modifier date
+            </button>
+            <h3 className="text-sm font-black text-white uppercase tracking-widest mb-6">Créneau horaire</h3>
             <div className="space-y-3">
                 {timeSlots.map(slot => (
                     <button 
                       key={slot.id} 
                       onClick={() => handleTimeSelect(slot)} 
-                      className={`w-full text-left p-4 rounded-xl border transition-all flex justify-between items-center ${
-                        selectedTimeSlot.id === slot.id ? 'bg-cyan-600/20 border-cyan-500' : 'bg-gray-800 border-gray-700 hover:border-cyan-500/50'
+                      className={`w-full text-left p-5 rounded-[1.5rem] border transition-all flex justify-between items-center ${
+                        selectedTimeSlot.id === slot.id ? 'bg-[#D2B48C]/10 border-[#D2B48C]' : 'bg-[#1A2536] border-white/5'
                       }`}
                     >
                        <div>
-                         <p className="font-bold text-white">{slot.label}</p>
-                         <p className="text-xs text-gray-400 italic">{slot.time} ({slot.duration}h)</p>
+                         <p className={`font-black uppercase text-xs ${selectedTimeSlot.id === slot.id ? 'text-[#D2B48C]' : 'text-white'}`}>{slot.label}</p>
+                         <p className="text-[10px] text-slate-500 font-bold uppercase mt-0.5">{slot.time}</p>
                        </div>
-                       <p className="font-black text-xl text-cyan-400">${user.rate * slot.duration}</p>
+                       <p className="font-black text-lg text-[#D2B48C]">${user.rate * slot.duration}</p>
                     </button>
                 ))}
             </div>
@@ -117,79 +117,75 @@ const BookingModal: React.FC<BookingModalProps> = ({ user }) => {
         );
       case 'brief':
         return (
-          <div className="p-6 space-y-4">
-            <button onClick={() => setStep('time')} className="text-xs text-cyan-400 mb-2 flex items-center gap-1">&larr; Modifier le créneau</button>
-            <h3 className="text-xl font-bold mb-2">Détails du projet</h3>
-            <div>
-              <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Lieu du shooting</label>
-              <input 
-                type="text" 
-                value={location}
-                onChange={(e) => setLocation(e.target.value)}
-                placeholder="Ex: Studio 5, ou adresse précise..."
-                className="w-full bg-gray-800 text-white p-3 rounded-xl border border-gray-700 focus:border-cyan-500 outline-none text-sm"
-              />
+          <div className="p-6 space-y-6">
+            <button onClick={() => setStep('time')} className="text-[10px] font-black text-[#D2B48C] uppercase tracking-widest mb-2 flex items-center gap-2">
+                <Icon name="chevronRight" className="w-3 h-3 rotate-180" /> Modifier créneau
+            </button>
+            <div className="space-y-4">
+                <div>
+                  <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Lieu (Studio/Extérieur)</label>
+                  <input 
+                    type="text" 
+                    value={location}
+                    onChange={(e) => setLocation(e.target.value)}
+                    placeholder="Paris 08, Studio Lumière..."
+                    className="w-full bg-[#1A2536] text-white p-4 rounded-xl border border-white/5 focus:border-[#D2B48C]/50 outline-none text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Brief & Instructions</label>
+                  <textarea 
+                    rows={3}
+                    value={notes}
+                    onChange={(e) => setNotes(e.target.value)}
+                    placeholder="Style, tenues, attentes..."
+                    className="w-full bg-[#1A2536] text-white p-4 rounded-xl border border-white/5 focus:border-[#D2B48C]/50 outline-none text-sm resize-none"
+                  />
+                </div>
             </div>
-            <div>
-              <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Brief Créatif / Notes</label>
-              <textarea 
-                rows={4}
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                placeholder="Décrivez vos attentes, style, tenues..."
-                className="w-full bg-gray-800 text-white p-3 rounded-xl border border-gray-700 focus:border-cyan-500 outline-none text-sm resize-none"
-              />
-            </div>
-            <button onClick={() => setStep('payment')} className="w-full bg-cyan-600 hover:bg-cyan-500 text-white font-black py-3 rounded-xl shadow-lg transition-all">
-              ÉTAPE PAIEMENT
+            <button onClick={() => setStep('payment')} className="w-full bg-[#D2B48C] text-[#050B14] font-black py-4 rounded-xl uppercase tracking-widest text-xs shadow-xl shadow-[#D2B48C]/10">
+              Étape Paiement
             </button>
           </div>
         );
       case 'payment':
         const prestationTotal = user.rate * selectedTimeSlot.duration;
-        const serviceFee = prestationTotal * 0.12; // 12% standard service fee
+        const serviceFee = prestationTotal * 0.12;
         const finalTotal = prestationTotal + serviceFee;
 
         return (
           <div className="p-6">
-            <button onClick={() => setStep('brief')} className="text-xs text-cyan-400 mb-4 flex items-center gap-1">&larr; Modifier le brief</button>
-            <h3 className="text-xl font-bold mb-4">Finalisation Escrow</h3>
-            <div className="bg-gray-800/80 p-5 rounded-2xl mb-6 border border-gray-700 space-y-3">
-                <div className="flex justify-between items-center text-sm">
-                    <span className="text-gray-400">Prestation ({selectedTimeSlot.duration}h)</span>
-                    <span className="font-bold">${prestationTotal.toFixed(2)}</span>
+            <h3 className="text-sm font-black text-white uppercase tracking-widest mb-6">Récapitulatif Escrow</h3>
+            <div className="bg-[#1A2536] p-6 rounded-2xl mb-8 border border-white/5 space-y-4">
+                <div className="flex justify-between items-center">
+                    <span className="text-[10px] font-bold text-slate-500 uppercase">Prestation ({selectedTimeSlot.duration}h)</span>
+                    <span className="font-black text-white text-sm">${prestationTotal.toFixed(2)}</span>
                 </div>
-                 <div className="flex justify-between items-center text-sm">
-                    <span className="text-gray-400">Frais de service (Escrow)</span>
-                    <span className="font-bold text-cyan-400">${serviceFee.toFixed(2)}</span>
+                 <div className="flex justify-between items-center">
+                    <span className="text-[10px] font-bold text-slate-500 uppercase">Frais Sécurisation IA</span>
+                    <span className="font-black text-[#D2B48C] text-sm">${serviceFee.toFixed(2)}</span>
                 </div>
-                 <div className="flex justify-between items-center text-white pt-3 border-t border-gray-700">
-                    <span className="font-black text-lg">TOTAL</span>
-                    <span className="font-black text-2xl text-cyan-400">${finalTotal.toFixed(2)}</span>
+                 <div className="pt-4 border-t border-white/5 flex justify-between items-center">
+                    <span className="font-black text-white text-xs uppercase">TOTAL</span>
+                    <span className="font-black text-2xl text-[#D2B48C]">${finalTotal.toFixed(2)}</span>
                 </div>
             </div>
             
-            <p className="text-[10px] text-gray-500 mb-4 text-center leading-relaxed">
-              Vos fonds seront retenus en séquestre et libérés uniquement après votre validation du shooting.
-            </p>
-
-            <button onClick={handlePaymentConfirm} className="w-full bg-purple-600 hover:bg-purple-500 text-white font-black py-4 rounded-xl shadow-xl transition-all uppercase tracking-widest">
-              CONFIRMER LA RÉSERVATION
+            <button onClick={handlePaymentConfirm} className="w-full bg-[#D2B48C] text-[#050B14] font-black py-5 rounded-2xl uppercase tracking-[0.2em] text-[10px] shadow-2xl">
+              CONFIRMER RÉSERVATION
             </button>
           </div>
         );
       case 'confirmed':
         return (
             <div className="p-10 text-center animate-scale-in">
-                 <div className="w-20 h-20 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-6 shadow-[0_0_20px_rgba(34,197,94,0.3)]">
-                    <Icon name="check" className="w-10 h-10 text-green-400" />
+                 <div className="w-20 h-20 bg-[#D2B48C]/10 rounded-full flex items-center justify-center mx-auto mb-6">
+                    <Icon name="check" className="w-10 h-10 text-[#D2B48C]" />
                  </div>
-                 <h3 className="text-2xl font-black text-white uppercase tracking-tight">Demande envoyée !</h3>
-                 <p className="text-gray-400 mt-3 text-sm leading-relaxed">
-                   {user.name} a reçu votre proposition pour le {selectedDate?.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })}.
-                 </p>
-                 <button onClick={onClose} className="w-full mt-10 bg-gray-800 hover:bg-gray-700 text-white font-bold py-4 rounded-xl transition-all">
-                    RETOUR À LA DÉCOUVERTE
+                 <h3 className="text-2xl font-black text-white uppercase tracking-tight">Demande Envoyée</h3>
+                 <p className="text-slate-500 mt-3 text-sm font-medium">Le talent a été notifié de votre proposition Elite.</p>
+                 <button onClick={onClose} className="w-full mt-10 bg-[#1A2536] text-white font-black py-4 rounded-xl uppercase tracking-widest text-xs">
+                    Fermer
                 </button>
             </div>
         )
@@ -197,11 +193,11 @@ const BookingModal: React.FC<BookingModalProps> = ({ user }) => {
   };
 
   return (
-    <div className="fixed inset-0 bg-black/80 backdrop-blur-xl flex items-center justify-center z-[2000] p-4 animate-fade-in">
-      <div className="bg-gray-900 border border-gray-800 rounded-3xl w-full max-w-md overflow-hidden shadow-2xl">
-        <div className="bg-gray-800/50 p-4 border-b border-gray-700 flex justify-between items-center">
-          <h2 className="text-sm font-black text-cyan-400 uppercase tracking-widest">Réservation Elite</h2>
-          <button onClick={onClose} className="text-gray-500 hover:text-white p-1">
+    <div className="fixed inset-0 bg-[#050B14]/80 backdrop-blur-xl flex items-end md:items-center justify-center z-[2000] p-0 md:p-4 animate-fade-in">
+      <div className="bg-[#0D1625] border-t md:border border-white/10 rounded-t-[2.5rem] md:rounded-[2.5rem] w-full max-w-md overflow-hidden shadow-2xl">
+        <div className="p-4 border-b border-white/5 flex justify-between items-center px-6">
+          <span className="text-[9px] font-black text-[#D2B48C] uppercase tracking-[0.3em]">Elite Booking System</span>
+          <button onClick={onClose} className="text-slate-500 hover:text-white p-2">
             <Icon name="close" className="w-5 h-5" />
           </button>
         </div>

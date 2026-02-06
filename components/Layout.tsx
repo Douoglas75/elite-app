@@ -41,6 +41,7 @@ const BottomNavItem: React.FC<{ tab: ActiveTab; icon: IconName; label: string; t
 
 const Layout: React.FC<LayoutProps> = ({ children }) => {
     const { activeTab, viewingUser, activeChatThreadId, activeSubView } = useAppContext();
+    // On masque la nav globale SI on est dans une vue spécifique qui a sa propre barre d'action
     const showNavBar = !viewingUser && !activeChatThreadId && !activeSubView;
 
     return (
@@ -65,7 +66,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                     {children}
                 </main>
                 
-                {/* Mobile Bottom Nav - STRICTLY FIXED */}
+                {/* Mobile Bottom Nav - STRICTLY FIXED AND CONDITIONAL */}
                 {showNavBar && (
                     <nav className="fixed bottom-0 left-0 right-0 bg-[#0D1625]/90 backdrop-blur-2xl border-t border-white/5 h-[84px] pb-[env(safe-area-inset-bottom)] px-2 z-[1000] md:hidden flex justify-around items-center">
                         <BottomNavItem tab="discover" icon="search" label="Explorer" />
