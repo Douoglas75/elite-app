@@ -1,7 +1,7 @@
 
 import React, { createContext, useState, useContext, ReactNode, useCallback, useMemo, useEffect } from 'react';
 import { MOCK_USERS, MOCK_MESSAGES, MOCK_BOOKINGS, CURRENT_USER } from '../constants';
-import type { User, Booking, MessageThread, UserType, MoodboardItem, Review, VerificationStatus } from '../types';
+import type { User, Booking, MessageThread, UserType, MoodboardItem, Review } from '../types';
 
 interface UserContextType {
   isLoggedIn: boolean;
@@ -15,6 +15,7 @@ interface UserContextType {
   login: (email: string, pass: string) => Promise<boolean>;
   register: (name: string, email: string, types: UserType[]) => Promise<void>;
   logout: () => void;
+  deleteAccount: () => void;
   completeInitialSetup: (data: { name: string; types: UserType[] }) => { startTour: boolean };
   completeProOnboarding: () => void;
   updateCurrentUser: (updatedData: Partial<User>) => void;
@@ -41,7 +42,7 @@ const storage = {
     set: (key: string, value: any) => {
         try {
             localStorage.setItem(key, JSON.stringify(value));
-        } catch (e) { console.error(e); }
+        } catch (e) { console.error("Storage Error:", e); }
     }
 };
 
@@ -54,8 +55,9 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const saved = storage.get('elite_db_users', MOCK_USERS);
     return saved.map((u: User) => ({
       ...u,
-      completedShootsCount: u.completedShootsCount || Math.floor(Math.random() * 30) + 5,
-      reviews: u.reviews || []
+      completedShootsCount: u.completedShootsCount || 0,
+      reviews: u.reviews || [],
+      portfolio: u.portfolio || []
     }));
   });
   
@@ -63,6 +65,7 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [bookings, setBookings] = useState<Booking[]>(() => storage.get('elite_db_bookings', MOCK_BOOKINGS));
   const [moodboards, setMoodboards] = useState<Record<string, MoodboardItem[]>>(() => storage.get('elite_db_moodboards', {}));
 
+  // Auto-save cycle
   useEffect(() => {
     storage.set('elite_active_user', currentUser);
     setUsers(prev => {
@@ -83,12 +86,40 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     localStorage.setItem('elite_onboarded', isProfileComplete ? 'true' : 'false');
   }, [users, messages, bookings, moodboards, isLoggedIn, isProfileComplete]);
 
+  const refreshLocation = useCallback(async (): Promise<{ lat: number; lng: number }> => {
+    return new Promise((resolve, reject) => {
+      if (!navigator.geolocation) {
+        reject(new Error("Geolocation unsupported"));
+        return;
+      }
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          const newLoc = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+          setCurrentUser(prev => ({ ...prev, location: newLoc }));
+          resolve(newLoc);
+        },
+        (err) => reject(err),
+        { enableHighAccuracy: true, timeout: 5000 }
+      );
+    });
+  }, []);
+
   const updateCurrentUser = useCallback((data: Partial<User>) => {
     setCurrentUser(prev => ({ ...prev, ...data }));
   }, []);
 
   const saveProfile = useCallback((updatedUser: User) => {
     setCurrentUser(updatedUser);
+  }, []);
+
+  const logout = useCallback(() => {
+    localStorage.removeItem('elite_session');
+    window.location.reload();
+  }, []);
+
+  const deleteAccount = useCallback(() => {
+    localStorage.clear();
+    window.location.reload();
   }, []);
 
   const postReview = useCallback((booking: Booking, reviewData: { rating: number, comment: string }) => {
@@ -135,14 +166,13 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         return false;
     },
     register: async (name: string, email: string, types: UserType[]) => {
-        setCurrentUser({ ...CURRENT_USER, id: Date.now(), name, email, types, completedShootsCount: 0, reviews: [] });
+        const newUser = { ...CURRENT_USER, id: Date.now(), name, email, types, portfolio: [], completedShootsCount: 0, reviews: [] };
+        setCurrentUser(newUser);
         setIsLoggedIn(true);
         setProfileComplete(false);
     },
-    logout: () => {
-        localStorage.removeItem('elite_session');
-        window.location.reload();
-    },
+    logout,
+    deleteAccount,
     completeInitialSetup: (data: any) => {
         setCurrentUser(prev => ({ ...prev, ...data, isPro: true }));
         setProfileComplete(true);
@@ -171,10 +201,10 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         setBookings(prev => prev.map(b => b.id === id ? { ...b, status } : b));
     },
     postReview, 
-    refreshLocation: async () => ({ lat: 48.8566, lng: 2.3522 }), 
+    refreshLocation,
     updateMoodboard: (bid: string, items: any) => setMoodboards(prev => ({ ...prev, [bid]: items })),
     trackAction: (a: string, d: any) => console.log(a, d)
-  }), [isLoggedIn, isProfileComplete, users, messages, bookings, currentUser, moodboards, postReview, saveProfile]);
+  }), [isLoggedIn, isProfileComplete, users, messages, bookings, currentUser, moodboards, postReview, saveProfile, logout, deleteAccount, refreshLocation, updateCurrentUser]);
 
   return <UserContext.Provider value={value}>{children}</UserContext.Provider>;
 };

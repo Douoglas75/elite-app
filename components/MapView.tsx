@@ -24,11 +24,8 @@ const MapView: React.FC<MapViewProps> = ({ filteredUsers }) => {
 
   const displayUsers = useMemo(() => {
     const list = filteredUsers || allUsers;
-    const isMeInList = list.some(u => u.id === currentUser.id);
-    if (!isMeInList) {
-        return [currentUser, ...list];
-    }
-    return list;
+    const otherUsers = list.filter(u => u.id !== currentUser.id);
+    return [currentUser, ...otherUsers];
   }, [filteredUsers, allUsers, currentUser]);
 
   useEffect(() => {
@@ -42,7 +39,7 @@ const MapView: React.FC<MapViewProps> = ({ filteredUsers }) => {
                 maxZoom: 18,
                 minZoom: 3,
                 tap: true
-            }).setView([currentUser.location.lat, currentUser.location.lng], 12);
+            }).setView([currentUser.location.lat, currentUser.location.lng], 13);
             
             mapInstanceRef.current = map;
 
@@ -53,11 +50,14 @@ const MapView: React.FC<MapViewProps> = ({ filteredUsers }) => {
 
             userLayerRef.current = L.layerGroup().addTo(map);
             
+            // Initial Locate
+            handleLiveLocate();
+
             setTimeout(() => {
               if (mapInstanceRef.current) mapInstanceRef.current.invalidateSize();
             }, 500);
         } catch (e) {
-            console.error("Leaflet Init Error:", e);
+            console.error("Map Init Failed:", e);
         }
     };
 
@@ -103,14 +103,14 @@ const MapView: React.FC<MapViewProps> = ({ filteredUsers }) => {
         html: `<div class="relative ${isMe ? 'z-[5000]' : ''} animate-scale-in">
                  ${isMe ? `<div class="absolute -inset-4 bg-blue-500/20 rounded-full animate-ping"></div>` : ''}
                  ${user.isAvailableNow ? `<div class="absolute -inset-2 ${isMe ? 'bg-blue-500/30' : 'bg-red-500/20'} rounded-full animate-pulse"></div>` : ''}
-                 <div class="w-10 h-10 rounded-2xl border-2 ${borderColor} bg-[#0D1625] overflow-hidden shadow-2xl transition-all ${isMe ? 'ring-4 ring-blue-500/30' : ''}">
+                 <div class="w-12 h-12 rounded-[1.2rem] border-2 ${borderColor} bg-[#0D1625] overflow-hidden shadow-2xl transition-all ${isMe ? 'ring-4 ring-blue-500/30' : ''}">
                    <img src="${user.avatarUrl}" class="w-full h-full object-cover" />
                  </div>
                  <div class="flex gap-[-4px]">
                     ${badgesHtml}
                  </div>
                </div>`,
-        className: '', iconSize: [40, 40], iconAnchor: [20, 20]
+        className: '', iconSize: [48, 48], iconAnchor: [24, 24]
       });
 
       const marker = L.marker([user.location.lat, user.location.lng], { 
@@ -131,10 +131,13 @@ const MapView: React.FC<MapViewProps> = ({ filteredUsers }) => {
     try {
         const newCoords = await refreshLocation();
         if (mapInstanceRef.current) {
-            mapInstanceRef.current.flyTo([newCoords.lat, newCoords.lng], 15, { duration: 1.5 });
+            mapInstanceRef.current.flyTo([newCoords.lat, newCoords.lng], 15, { 
+              duration: 2,
+              easeLinearity: 0.25
+            });
         }
     } catch (err) {
-        alert("Activez la géolocalisation dans vos paramètres système pour cette fonctionnalité.");
+        console.warn("Location permission denied.");
     } finally {
         setTimeout(() => setIsLocating(false), 2000);
     }
@@ -146,18 +149,18 @@ const MapView: React.FC<MapViewProps> = ({ filteredUsers }) => {
       
       <div className="absolute inset-0 z-[500] pointer-events-none flex flex-col justify-between p-4 md:p-6 pb-24 md:pb-8">
         <div className="flex justify-center">
-          <div className="bg-[#050B14]/90 backdrop-blur-xl p-1 rounded-2xl border border-white/10 shadow-2xl flex gap-1 pointer-events-auto">
-              <button onClick={() => setActiveLayer('users')} className={`px-6 py-2 rounded-xl text-[10px] font-black tracking-widest transition-all uppercase whitespace-nowrap ${activeLayer === 'users' ? 'bg-[#D2B48C] text-[#050B14]' : 'text-slate-400'}`}>TALENTS</button>
-              <button onClick={() => setActiveLayer('spots')} className={`px-6 py-2 rounded-xl text-[10px] font-black tracking-widest transition-all uppercase whitespace-nowrap ${activeLayer === 'spots' ? 'bg-[#D2B48C] text-[#050B14]' : 'text-slate-400'}`}>SPOTS</button>
+          <div className="bg-[#050B14]/90 backdrop-blur-xl p-1.5 rounded-2xl border border-white/10 shadow-2xl flex gap-1 pointer-events-auto">
+              <button onClick={() => setActiveLayer('users')} className={`px-6 py-2.5 rounded-xl text-[10px] font-black tracking-widest transition-all uppercase whitespace-nowrap ${activeLayer === 'users' ? 'bg-[#D2B48C] text-[#050B14]' : 'text-slate-400'}`}>TALENTS</button>
+              <button onClick={() => setActiveLayer('spots')} className={`px-6 py-2.5 rounded-xl text-[10px] font-black tracking-widest transition-all uppercase whitespace-nowrap ${activeLayer === 'spots' ? 'bg-[#D2B48C] text-[#050B14]' : 'text-slate-400'}`}>SPOTS</button>
           </div>
         </div>
 
         <div className="flex justify-end items-end">
             <button 
               onClick={handleLiveLocate}
-              className={`w-14 h-14 rounded-2xl flex items-center justify-center shadow-2xl active:scale-90 transition-all pointer-events-auto ${isLocating ? 'bg-blue-500 text-white animate-pulse' : 'bg-white text-[#050B14]'}`}
+              className={`w-16 h-16 rounded-[1.8rem] flex items-center justify-center shadow-2xl active:scale-90 transition-all pointer-events-auto border-4 border-[#050B14] ${isLocating ? 'bg-blue-500 text-white animate-pulse' : 'bg-white text-[#050B14]'}`}
             >
-              <Icon name={isLocating ? "bolt" : "locationMarker"} className="w-7 h-7" />
+              <Icon name={isLocating ? "bolt" : "locationMarker"} className="w-8 h-8" />
             </button>
         </div>
       </div>
