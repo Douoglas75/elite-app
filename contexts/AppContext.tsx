@@ -1,6 +1,6 @@
 
 import React, { createContext, useState, useContext, ReactNode, useCallback, useMemo } from 'react';
-import { UserType, User, Booking, PortfolioItem } from '../types';
+import { UserType, User, Booking, PortfolioItem, DiscoverMode } from '../types';
 
 export type ActiveTab = 'discover' | 'favorites' | 'messages' | 'bookings' | 'profile';
 type DiscoverView = 'grid' | 'map';
@@ -10,6 +10,7 @@ interface AppContextType {
   // View State
   activeTab: ActiveTab;
   discoverView: DiscoverView;
+  discoverMode: DiscoverMode;
   viewingUser: User | null;
   activeChatThreadId: number | null;
   activeSubView: string | null;
@@ -18,6 +19,7 @@ interface AppContextType {
   
   // Filter State
   filterType: FilterType;
+  filterSpotCategory: string;
   filterAvailable: boolean;
   searchQuery: string;
 
@@ -33,6 +35,7 @@ interface AppContextType {
   // View Setters
   setActiveTab: (tab: ActiveTab) => void;
   setDiscoverView: React.Dispatch<React.SetStateAction<DiscoverView>>;
+  setDiscoverMode: React.Dispatch<React.SetStateAction<DiscoverMode>>;
   setViewingUser: React.Dispatch<React.SetStateAction<User | null>>;
   setActiveChatThreadId: React.Dispatch<React.SetStateAction<number | null>>;
   setActiveSubView: React.Dispatch<React.SetStateAction<string | null>>;
@@ -41,6 +44,7 @@ interface AppContextType {
   
   // Filter Setters
   setFilterType: (type: FilterType) => void;
+  setFilterSpotCategory: (cat: string) => void;
   setFilterAvailable: (available: boolean) => void;
   setSearchQuery: (query: string) => void;
 
@@ -66,6 +70,7 @@ const AppContext = createContext<AppContextType | undefined>(undefined);
 export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [activeTab, setActiveTab] = useState<ActiveTab>('discover');
   const [discoverView, setDiscoverView] = useState<DiscoverView>('map');
+  const [discoverMode, setDiscoverMode] = useState<DiscoverMode>('talents');
   const [viewingUser, setViewingUser] = useState<User | null>(null);
   const [activeChatThreadId, setActiveChatThreadId] = useState<number | null>(null);
   const [activeSubView, setActiveSubView] = useState<string | null>(null);
@@ -73,6 +78,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const [projectingMedia, setProjectingMedia] = useState<PortfolioItem | null>(null);
   
   const [filterType, setFilterType] = useState<FilterType>('All');
+  const [filterSpotCategory, setFilterSpotCategory] = useState('All');
   const [filterAvailable, setFilterAvailable] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   
@@ -115,12 +121,14 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const contextValue = useMemo(() => ({
       activeTab, setActiveTab,
       discoverView, setDiscoverView,
+      discoverMode, setDiscoverMode,
       viewingUser, setViewingUser,
       activeChatThreadId, setActiveChatThreadId,
       activeSubView, setActiveSubView,
       fullScreenMedia, setFullScreenMedia,
       projectingMedia, setProjectingMedia,
       filterType, setFilterType,
+      filterSpotCategory, setFilterSpotCategory,
       filterAvailable, setFilterAvailable,
       searchQuery, setSearchQuery,
       isQuizOpen, setQuizOpen,
@@ -136,8 +144,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       viewProfile,
       closeTour,
   }), [
-      activeTab, discoverView, viewingUser, activeChatThreadId, activeSubView, fullScreenMedia, projectingMedia,
-      filterType, filterAvailable, searchQuery,
+      activeTab, discoverView, discoverMode, viewingUser, activeChatThreadId, activeSubView, fullScreenMedia, projectingMedia,
+      filterType, filterSpotCategory, filterAvailable, searchQuery,
       isQuizOpen, bookingUser, signingBooking, isOnboardingOpen, reviewingBooking, isEditingProfile,
       isTourActive, handleBack, selectTab, selectThread, viewProfile, closeTour
   ]);

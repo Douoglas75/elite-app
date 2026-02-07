@@ -14,13 +14,12 @@ interface MapViewProps {
 
 const MapView: React.FC<MapViewProps> = ({ filteredUsers }) => {
   const { users: allUsers, currentUser, refreshLocation, spots: dynamicSpots, refreshSpots, isRefreshingSpots } = useUser();
-  const { viewProfile } = useAppContext();
+  const { viewProfile, discoverMode, filterSpotCategory } = useAppContext();
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<any>(null);
   const userLayerRef = useRef<any>(null);
   const spotLayerRef = useRef<any>(null);
   
-  const [activeLayer, setActiveLayer] = useState<'users' | 'spots'>('users');
   const [isLocating, setIsLocating] = useState(false);
   const [selectedSpot, setSelectedSpot] = useState<Spot | null>(null);
 
@@ -29,6 +28,11 @@ const MapView: React.FC<MapViewProps> = ({ filteredUsers }) => {
     const otherUsers = list.filter(u => u.id !== currentUser.id);
     return [currentUser, ...otherUsers];
   }, [filteredUsers, allUsers, currentUser]);
+
+  const filteredSpots = useMemo(() => {
+    if (filterSpotCategory === 'All') return dynamicSpots;
+    return dynamicSpots.filter(s => s.category === filterSpotCategory || s.type === filterSpotCategory);
+  }, [dynamicSpots, filterSpotCategory]);
 
   useEffect(() => {
     const initMap = () => {
@@ -57,14 +61,14 @@ const MapView: React.FC<MapViewProps> = ({ filteredUsers }) => {
 
   useEffect(() => {
     if (!mapInstanceRef.current) return;
-    if (activeLayer === 'users') {
+    if (discoverMode === 'talents') {
         mapInstanceRef.current.addLayer(userLayerRef.current);
         mapInstanceRef.current.removeLayer(spotLayerRef.current);
     } else {
         mapInstanceRef.current.addLayer(spotLayerRef.current);
         mapInstanceRef.current.removeLayer(userLayerRef.current);
     }
-  }, [activeLayer]);
+  }, [discoverMode]);
 
   useEffect(() => {
     const userLayer = userLayerRef.current;
@@ -88,7 +92,7 @@ const MapView: React.FC<MapViewProps> = ({ filteredUsers }) => {
     });
 
     spotLayer.clearLayers();
-    dynamicSpots.forEach(spot => {
+    filteredSpots.forEach(spot => {
       const isSelected = selectedSpot?.id === spot.id;
       const icon = L.divIcon({
         html: `<div class="relative animate-scale-in">
@@ -103,7 +107,7 @@ const MapView: React.FC<MapViewProps> = ({ filteredUsers }) => {
       const marker = L.marker([spot.location.lat, spot.location.lng], { icon }).addTo(spotLayer);
       marker.on('click', () => setSelectedSpot(spot));
     });
-  }, [displayUsers, currentUser, selectedSpot, dynamicSpots]);
+  }, [displayUsers, currentUser, selectedSpot, filteredSpots]);
 
   const handleLiveLocate = async () => {
     if (isLocating) return;
@@ -127,102 +131,96 @@ const MapView: React.FC<MapViewProps> = ({ filteredUsers }) => {
     <div className="relative w-full h-full bg-[#050B14] overflow-hidden">
       <div ref={mapContainerRef} className="w-full h-full z-0" />
       
-      <div className="absolute inset-0 z-[500] pointer-events-none flex flex-col justify-between">
-        {/* Top Toggle */}
-        <div className="p-4 md:p-6 flex justify-center">
-          <div className="bg-[#050B14]/90 backdrop-blur-xl p-1.5 rounded-2xl border border-white/10 shadow-2xl flex gap-1 pointer-events-auto">
-              <button onClick={() => { setActiveLayer('users'); setSelectedSpot(null); }} className={`px-6 py-2.5 rounded-xl text-[10px] font-black tracking-widest transition-all uppercase whitespace-nowrap ${activeLayer === 'users' ? 'bg-[#D2B48C] text-[#050B14]' : 'text-slate-400'}`}>TALENTS</button>
-              <button onClick={() => { setActiveLayer('spots'); setSelectedSpot(null); }} className={`px-6 py-2.5 rounded-xl text-[10px] font-black tracking-widest transition-all uppercase whitespace-nowrap ${activeLayer === 'spots' ? 'bg-[#D2B48C] text-[#050B14]' : 'text-slate-400'}`}>SPOTS</button>
-          </div>
-        </div>
-
-        {/* Dynamic Controls Bottom */}
-        <div className="p-4 md:p-6 pb-28 md:pb-12 space-y-4 flex flex-col items-end pointer-events-none">
-            {/* AI Refresh Button */}
-            {activeLayer === 'spots' && (
+      <div className="absolute inset-0 z-[500] pointer-events-none flex flex-col justify-end">
+        {/* Unified Control Bar on the right */}
+        <div className="absolute top-1/2 right-4 -translate-y-1/2 flex flex-col gap-3 pointer-events-auto">
+            {discoverMode === 'spots' && (
                 <button 
                     onClick={refreshSpots}
                     disabled={isRefreshingSpots}
-                    className="w-14 h-14 rounded-2xl flex items-center justify-center shadow-2xl bg-[#0D1625] text-[#D2B48C] border border-[#D2B48C]/30 pointer-events-auto active:scale-90 transition-all overflow-hidden relative"
+                    className="w-14 h-14 rounded-2xl flex items-center justify-center shadow-2xl bg-[#0D1625]/80 backdrop-blur-xl text-[#D2B48C] border border-white/10 active:scale-95 transition-all"
                 >
                     {isRefreshingSpots ? (
                         <div className="w-6 h-6 border-2 border-[#D2B48C] border-t-transparent rounded-full animate-spin" />
                     ) : (
                         <Icon name="sparkles" className="w-6 h-6" />
                     )}
-                    {isRefreshingSpots && <div className="absolute inset-0 bg-white/5 animate-pulse" />}
                 </button>
             )}
-
-            {/* Locate Button */}
             <button 
               onClick={handleLiveLocate}
-              className={`w-14 h-14 rounded-2xl flex items-center justify-center shadow-2xl active:scale-90 transition-all pointer-events-auto border-4 border-[#050B14] ${isLocating ? 'bg-blue-500 text-white animate-pulse' : 'bg-white text-[#050B14]'}`}
+              className={`w-14 h-14 rounded-2xl flex items-center justify-center shadow-2xl active:scale-95 transition-all border border-white/10 ${isLocating ? 'bg-blue-500 text-white animate-pulse' : 'bg-[#0D1625]/80 backdrop-blur-xl text-white'}`}
             >
-              <Icon name={isLocating ? "bolt" : "locationMarker"} className="w-7 h-7" />
+              <Icon name={isLocating ? "bolt" : "locationMarker"} className="w-6 h-6" />
             </button>
+        </div>
 
-            {/* Spots Gallery Slider */}
-            {activeLayer === 'spots' && (
+        {/* Dynamic Spots Gallery at Bottom */}
+        <div className="p-4 md:p-6 pb-28 md:pb-12 flex flex-col items-stretch">
+            {discoverMode === 'spots' && (
                 <div className="w-full pointer-events-auto animate-fade-in-up">
-                    <div className="flex gap-4 overflow-x-auto no-scrollbar pb-2">
-                        {dynamicSpots.map(spot => (
+                    <div className="flex gap-4 overflow-x-auto no-scrollbar pb-6 px-2 snap-x snap-mandatory">
+                        {filteredSpots.map(spot => (
                             <button 
                                 key={spot.id} 
                                 onClick={() => centerOnSpot(spot)}
-                                className={`flex-shrink-0 w-64 h-32 rounded-[2rem] overflow-hidden border-2 transition-all duration-500 relative group shadow-2xl ${selectedSpot?.id === spot.id ? 'border-[#D2B48C] scale-95 ring-4 ring-[#D2B48C]/20' : 'border-white/10'}`}
+                                className={`flex-shrink-0 w-[280px] h-40 rounded-[2.5rem] overflow-hidden border-2 transition-all duration-500 relative group shadow-2xl snap-center ${selectedSpot?.id === spot.id ? 'border-[#D2B48C] scale-95' : 'border-white/5 opacity-80'}`}
                             >
-                                <img src={spot.imageUrl} className="absolute inset-0 w-full h-full object-cover brightness-50 group-hover:brightness-75 transition-all" />
-                                <div className="absolute inset-0 p-5 flex flex-col justify-end">
-                                    <div className="flex justify-between items-center">
-                                        <div>
-                                            <p className="text-[8px] font-black text-[#D2B48C] uppercase tracking-widest">{spot.type} • {spot.category}</p>
-                                            <h4 className="text-sm font-black text-white uppercase tracking-tighter">{spot.name}</h4>
-                                        </div>
-                                        <div className="w-8 h-8 bg-white/20 backdrop-blur-md rounded-full flex items-center justify-center">
-                                            <Icon name="chevronRight" className="w-4 h-4 text-white" />
-                                        </div>
+                                <img 
+                                  src={spot.imageUrl} 
+                                  className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" 
+                                  alt={spot.name}
+                                  onError={(e) => { (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1449034446853-66c86144b0ad?auto=format&fit=crop&w=800&q=80'; }}
+                                />
+                                <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/30 to-transparent" />
+                                <div className="absolute inset-0 p-6 flex flex-col justify-end">
+                                    <div className="text-left">
+                                        <p className="text-[9px] font-black text-[#D2B48C] uppercase tracking-[0.3em] mb-1.5">{spot.type} • {spot.category}</p>
+                                        <h4 className="text-base font-black text-white uppercase tracking-tighter leading-none">{spot.name}</h4>
                                     </div>
                                 </div>
                             </button>
                         ))}
+                        <div className="flex-shrink-0 w-8" />
                     </div>
                 </div>
             )}
 
             {/* Spot Detail Modal */}
-            {selectedSpot && activeLayer === 'spots' && (
-                <div className="fixed inset-x-4 bottom-28 md:bottom-12 md:left-auto md:w-96 bg-[#0D1625]/95 backdrop-blur-2xl border border-white/10 p-8 rounded-[3rem] shadow-[0_20px_60px_rgba(0,0,0,0.6)] animate-scale-in pointer-events-auto z-[600]">
-                    <button onClick={() => setSelectedSpot(null)} className="absolute top-6 right-6 p-2 text-slate-500 hover:text-white"><Icon name="close" className="w-5 h-5"/></button>
-                    <div className="space-y-4">
-                        <div className="flex items-center gap-3">
-                             <div className="px-3 py-1 bg-[#D2B48C]/10 text-[#D2B48C] text-[8px] font-black rounded-lg uppercase tracking-widest border border-[#D2B48C]/20">{selectedSpot.type}</div>
-                             <div className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">{selectedSpot.category}</div>
+            {selectedSpot && discoverMode === 'spots' && (
+                <div className="fixed inset-x-4 bottom-28 md:bottom-12 md:left-auto md:w-[420px] bg-[#0D1625]/98 backdrop-blur-3xl border border-white/10 p-10 rounded-[4rem] shadow-[0_30px_90px_rgba(0,0,0,0.9)] animate-scale-in pointer-events-auto z-[600]">
+                    <button onClick={() => setSelectedSpot(null)} className="absolute top-10 right-10 p-2 text-slate-600 hover:text-white transition-colors">
+                        <Icon name="close" className="w-6 h-6"/>
+                    </button>
+                    <div className="space-y-8">
+                        <div className="flex items-center gap-4">
+                             <div className="px-4 py-2 bg-[#D2B48C]/15 text-[#D2B48C] text-[10px] font-black rounded-xl uppercase tracking-widest border border-[#D2B48C]/30">{selectedSpot.type}</div>
+                             <div className="text-xs text-slate-500 font-bold uppercase tracking-[0.2em]">{selectedSpot.category}</div>
                         </div>
-                        <h3 className="text-2xl font-black text-white uppercase tracking-tighter">{selectedSpot.name}</h3>
-                        <p className="text-slate-400 text-xs leading-relaxed font-medium">{selectedSpot.description}</p>
+                        <div className="space-y-3">
+                            <h3 className="text-4xl font-black text-white uppercase tracking-tighter leading-tight">{selectedSpot.name}</h3>
+                            <p className="text-slate-400 text-sm leading-relaxed font-medium">{selectedSpot.description}</p>
+                        </div>
                         
-                        {/* Grounding Source Link */}
                         {selectedSpot.sourceUrl && (
-                            <div className="pt-2">
-                                <p className="text-[8px] text-slate-600 font-black uppercase tracking-widest mb-2">Vérifié via Google Search</p>
+                            <div className="pt-4 border-t border-white/5">
                                 <a 
                                     href={selectedSpot.sourceUrl} 
                                     target="_blank" 
                                     rel="noopener noreferrer"
-                                    className="text-[9px] text-[#D2B48C] hover:underline flex items-center gap-1.5"
+                                    className="text-[11px] text-[#D2B48C] font-black uppercase tracking-widest flex items-center gap-2.5 hover:opacity-70 transition-opacity"
                                 >
-                                    <Icon name="link" className="w-3 h-3" />
-                                    Consulter la source web
+                                    <Icon name="link" className="w-4 h-4" />
+                                    Explorer sur le Web
                                 </a>
                             </div>
                         )}
 
                         <button 
                             onClick={() => window.open(`https://www.google.com/maps/dir/?api=1&destination=${selectedSpot.location.lat},${selectedSpot.location.lng}`, '_blank')}
-                            className="w-full bg-[#D2B48C] text-[#050B14] py-4 rounded-2xl font-black uppercase tracking-widest text-[10px] shadow-xl shadow-[#D2B48C]/10 hover:brightness-110 transition-all"
+                            className="w-full bg-[#D2B48C] text-[#050B14] py-6 rounded-3xl font-black uppercase tracking-[0.3em] text-[11px] shadow-2xl shadow-[#D2B48C]/20 hover:scale-[1.02] active:scale-95 transition-all"
                         >
-                            Y Aller (Google Maps)
+                            Y Aller via Google Maps
                         </button>
                     </div>
                 </div>
