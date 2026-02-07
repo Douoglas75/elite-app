@@ -1,8 +1,6 @@
 
-
 import React, { useEffect, useState, useMemo } from 'react';
 import UserProfileCard from './UserProfileCard';
-// Fix: Update import casing to match actual file names (Icon.tsx, etc.)
 import QuizModal from './QuizModal';
 import Icon from './Icon';
 import ProfileDetail from './ProfileDetail';
@@ -63,6 +61,14 @@ const App: React.FC = () => {
     });
   }, [users, filterType, filterAvailable, searchQuery]);
 
+  const filteredSpots = useMemo(() => {
+      return spots.filter(spot => {
+          const matchesCat = filterSpotCategory === 'All' || spot.category === filterSpotCategory || spot.type === filterSpotCategory;
+          const matchesSearch = searchQuery.trim() === '' || spot.name.toLowerCase().includes(searchQuery.toLowerCase());
+          return matchesCat && matchesSearch;
+      });
+  }, [spots, filterSpotCategory, searchQuery]);
+
   const spotCategories = useMemo(() => {
     const cats = Array.from(new Set(spots.map(s => s.category)));
     return ['All', ...cats];
@@ -95,17 +101,17 @@ const App: React.FC = () => {
                 <div className="flex justify-between items-center">
                     <h1 className="text-2xl font-black text-white uppercase tracking-tighter" data-tour="app-logo">Elite <span className="text-[#D2B48C]">Discover</span></h1>
                     
-                    {/* View Switcher: Talents vs Spots */}
-                    <div className="bg-[#050B14]/60 p-1 rounded-2xl border border-white/5 flex gap-1">
+                    {/* Switch Mode: Talents vs Spots */}
+                    <div className="bg-[#050B14]/60 p-1.5 rounded-2xl border border-white/5 flex gap-1">
                         <button 
                             onClick={() => setDiscoverMode('talents')}
-                            className={`px-5 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${discoverMode === 'talents' ? 'bg-[#D2B48C] text-[#050B14]' : 'text-slate-500'}`}
+                            className={`px-5 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${discoverMode === 'talents' ? 'bg-[#D2B48C] text-[#050B14]' : 'text-slate-500 hover:text-white'}`}
                         >
                             TALENTS
                         </button>
                         <button 
                             onClick={() => setDiscoverMode('spots')}
-                            className={`px-5 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${discoverMode === 'spots' ? 'bg-[#D2B48C] text-[#050B14]' : 'text-slate-500'}`}
+                            className={`px-5 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${discoverMode === 'spots' ? 'bg-[#D2B48C] text-[#050B14]' : 'text-slate-500 hover:text-white'}`}
                         >
                             SPOTS
                         </button>
@@ -120,18 +126,18 @@ const App: React.FC = () => {
                             placeholder={discoverMode === 'talents' ? "Rechercher un talent..." : "Trouver un lieu de shooting..."}
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
-                            className="w-full bg-[#050B14]/60 border border-white/10 rounded-2xl py-3.5 pl-11 pr-4 text-sm text-white focus:border-[#D2B48C]/50 outline-none transition-all"
+                            className="w-full bg-[#050B14]/60 border border-white/10 rounded-2xl py-4 pl-11 pr-4 text-sm text-white focus:border-[#D2B48C]/50 outline-none transition-all"
                         />
                     </div>
                     <button 
                       onClick={() => setDiscoverView(v => v === 'grid' ? 'map' : 'grid')} 
-                      className="w-12 h-12 rounded-2xl bg-[#D2B48C]/10 text-[#D2B48C] hover:bg-[#D2B48C] hover:text-[#050B14] transition-all flex items-center justify-center border border-[#D2B48C]/20 shadow-lg active:scale-95"
+                      className="w-14 h-14 rounded-2xl bg-[#D2B48C]/10 text-[#D2B48C] hover:bg-[#D2B48C] hover:text-[#050B14] transition-all flex items-center justify-center border border-[#D2B48C]/20 shadow-lg active:scale-95"
                     >
                         <Icon name={discoverView === 'grid' ? 'map' : 'grid'} className="w-5 h-5" />
                     </button>
                 </div>
                 
-                <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
+                <div className="flex gap-2.5 overflow-x-auto no-scrollbar pb-1">
                     {discoverMode === 'talents' ? (
                         [
                             { id: 'All', label: 'Tout' },
@@ -142,10 +148,10 @@ const App: React.FC = () => {
                             <button
                                 key={item.id}
                                 onClick={() => setFilterType(item.id as any)}
-                                className={`px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest whitespace-nowrap transition-all border ${
+                                className={`px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest whitespace-nowrap transition-all border ${
                                     filterType === item.id 
                                     ? 'bg-[#D2B48C] border-[#D2B48C] text-[#050B14] shadow-lg shadow-[#D2B48C]/20' 
-                                    : 'bg-[#1A2536]/40 border-white/5 text-slate-500'
+                                    : 'bg-[#1A2536]/40 border-white/5 text-slate-500 hover:text-white'
                                 }`}
                             >
                                 {item.label}
@@ -156,10 +162,10 @@ const App: React.FC = () => {
                             <button
                                 key={cat}
                                 onClick={() => setFilterSpotCategory(cat)}
-                                className={`px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest whitespace-nowrap transition-all border ${
+                                className={`px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest whitespace-nowrap transition-all border ${
                                     filterSpotCategory === cat 
                                     ? 'bg-[#D2B48C] border-[#D2B48C] text-[#050B14] shadow-lg shadow-[#D2B48C]/20' 
-                                    : 'bg-[#1A2536]/40 border-white/5 text-slate-500'
+                                    : 'bg-[#1A2536]/40 border-white/5 text-slate-500 hover:text-white'
                                 }`}
                             >
                                 {cat === 'All' ? 'TOUS LES LIEUX' : cat}
@@ -172,15 +178,46 @@ const App: React.FC = () => {
             <div className="flex-1 overflow-hidden relative">
                 {discoverView === 'grid' ? (
                   <div className="h-full overflow-y-auto custom-scrollbar p-6 md:p-10 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8 pb-[120px]">
-                      {filteredUsers.length > 0 ? (
-                          filteredUsers.map((user) => (
-                              <UserProfileCard key={user.id} user={user} onSelect={viewProfile} />
-                          ))
+                      {discoverMode === 'talents' ? (
+                          filteredUsers.length > 0 ? (
+                            filteredUsers.map((user) => (
+                                <UserProfileCard key={user.id} user={user} onSelect={viewProfile} />
+                            ))
+                          ) : (
+                            <div className="col-span-full flex flex-col items-center justify-center py-32 text-slate-700 opacity-20">
+                                <Icon name="search" className="w-16 h-16 mb-6" />
+                                <p className="font-black uppercase tracking-[0.4em] text-xs">Aucun talent détecté</p>
+                            </div>
+                          )
                       ) : (
-                          <div className="col-span-full flex flex-col items-center justify-center py-32 text-slate-700 opacity-20">
-                              <Icon name="search" className="w-16 h-16 mb-6" />
-                              <p className="font-black uppercase tracking-[0.4em] text-xs">Aucun talent détecté</p>
-                          </div>
+                        filteredSpots.length > 0 ? (
+                            filteredSpots.map((spot) => (
+                                <div 
+                                  key={spot.id} 
+                                  onClick={() => { setDiscoverView('map'); }} 
+                                  className="bg-[#0D1625] rounded-[2.5rem] overflow-hidden border border-white/5 shadow-2xl relative h-64 group cursor-pointer"
+                                >
+                                    <img 
+                                      src={spot.imageUrl} 
+                                      className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" 
+                                      alt={spot.name}
+                                      onError={(e) => { 
+                                          (e.target as HTMLImageElement).src = `https://images.unsplash.com/photo-1502602898657-3e91760cbb34?auto=format&fit=crop&w=800&q=80`; 
+                                      }}
+                                    />
+                                    <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent" />
+                                    <div className="absolute inset-0 p-8 flex flex-col justify-end">
+                                        <p className="text-[9px] font-black text-[#D2B48C] uppercase tracking-[0.3em] mb-2">{spot.type} • {spot.category}</p>
+                                        <h3 className="text-xl font-black text-white uppercase tracking-tighter">{spot.name}</h3>
+                                    </div>
+                                </div>
+                            ))
+                        ) : (
+                            <div className="col-span-full flex flex-col items-center justify-center py-32 text-slate-700 opacity-20">
+                                <Icon name="map" className="w-16 h-16 mb-6" />
+                                <p className="font-black uppercase tracking-[0.4em] text-xs">Aucun spot trouvé</p>
+                            </div>
+                        )
                       )}
                   </div>
                 ) : (

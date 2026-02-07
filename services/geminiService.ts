@@ -4,8 +4,10 @@ import type { User, AISuggestion, QuizQuestion, Spot } from '../types';
 
 const cleanJson = (text: string) => {
   try {
-    const jsonMatch = text.match(/(\{[\s\S]*\}|\[[\s\S]*\])/);
-    return jsonMatch ? jsonMatch[0] : text;
+    // Supprime les balises de code markdown si présentes
+    const cleaned = text.replace(/```json/g, "").replace(/```/g, "").trim();
+    const jsonMatch = cleaned.match(/(\{[\s\S]*\}|\[[\s\S]*\])/);
+    return jsonMatch ? jsonMatch[0] : cleaned;
   } catch (e) {
     return text;
   }
@@ -31,9 +33,17 @@ export const fetchRealTimeSpots = async (): Promise<Spot[]> => {
   if (!ai) return [];
 
   try {
-    const prompt = `Trouve 6 spots photo/vidéo gratuits, originaux et esthétiques à Paris (urbain, street, architecture ou nature). 
-    Pour chaque spot, fournis : nom, type (Indoor/Outdoor), catégorie, une description courte, des coordonnées GPS précises (lat/lng) et une URL d'image représentative.
-    Retourne uniquement un tableau JSON valide.`;
+    const prompt = `Trouve 6 spots photo/vidéo réels, gratuits et esthétiques à Paris (ex: colonnes, ponts, passages couverts). 
+    Pour chaque spot, fournis un objet JSON avec: 
+    - id (unique)
+    - name (nom du lieu)
+    - type ("Indoor" ou "Outdoor")
+    - category ("Architecture", "Nature", "Street", etc.)
+    - description (court texte de 20 mots max sur pourquoi c'est un bon spot)
+    - imageUrl (utilise une URL Unsplash source valide basée sur le nom du lieu, ex: https://source.unsplash.com/featured/?paris,architecture)
+    - location (objet avec lat et lng précis)
+    
+    Retourne UNIQUEMENT le tableau JSON.`;
 
     const response = await ai.models.generateContent({
       model: "gemini-3-flash-preview",
@@ -57,22 +67,31 @@ export const fetchRealTimeSpots = async (): Promise<Spot[]> => {
                 properties: {
                   lat: { type: Type.NUMBER },
                   lng: { type: Type.NUMBER }
-                }
+                },
+                required: ["lat", "lng"]
               }
-            }
+            },
+            required: ["id", "name", "type", "category", "description", "imageUrl", "location"]
           }
         }
       }
     });
 
-    const jsonStr = cleanJson(response.text || "[]");
+    const textResponse = response.text;
+    if (!textResponse) return [];
+
+    const jsonStr = cleanJson(textResponse);
     const spots: Spot[] = JSON.parse(jsonStr);
 
-    // Extraction des URLs de grounding pour satisfaire les règles de sécurité
     const groundingChunks = response.candidates?.[0]?.groundingMetadata?.groundingChunks;
     const sourceUrl = groundingChunks?.[0]?.web?.uri || "https://www.google.com/maps/search/photo+spots+paris";
 
-    return spots.map(s => ({ ...s, sourceUrl }));
+    return spots.map(s => ({ 
+      ...s, 
+      sourceUrl,
+      // Force une image un peu plus fiable si l'URL semble vide
+      imageUrl: s.imageUrl || `https://images.unsplash.com/photo-1502602898657-3e91760cbb34?auto=format&fit=crop&w=800&q=80`
+    }));
   } catch (error) {
     console.error("Gemini Search Error:", error);
     return [];

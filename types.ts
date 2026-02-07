@@ -1,15 +1,13 @@
 
-
 export enum UserType {
   Model = 'Modèle',
   Photographer = 'Photographe',
   Videographer = 'Vidéaste',
 }
 
+export type DiscoverMode = 'talents' | 'spots';
 export type VerificationStatus = 'none' | 'pending' | 'approved' | 'rejected';
 export type EscrowStatus = 'none' | 'held' | 'released' | 'refunded';
-// Fix: Define DiscoverMode which was missing and causing import errors.
-export type DiscoverMode = 'talents' | 'spots';
 
 export interface Review {
   id: number;
@@ -42,7 +40,7 @@ export interface Spot {
   description: string;
   imageUrl: string;
   location: { lat: number; lng: number; };
-  sourceUrl?: string; // URL issue de Google Search Grounding
+  sourceUrl?: string;
 }
 
 export interface User {
