@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { User, UserType, MessageThread, Booking, PaymentMethod, Transaction } from './types';
+import { User, UserType, MessageThread, Booking, PaymentMethod, Transaction, Spot } from './types';
 
 export const CURRENT_USER: User = {
     id: 999,
@@ -18,6 +18,63 @@ export const CURRENT_USER: User = {
     email: 'test@elite.com',
     completedShootsCount: 0
 };
+
+export const MOCK_SPOTS: Spot[] = [
+    {
+        id: 1,
+        name: 'Pont Bir-Hakeim',
+        type: 'Outdoor',
+        category: 'Architecture',
+        description: 'Iconique pour ses lignes de fuite et sa vue sur la Tour Eiffel. Parfait pour le Streetwear et la Mode.',
+        imageUrl: 'https://images.unsplash.com/photo-1549213821-4708d624e1d1?auto=format&fit=crop&w=800&q=80',
+        location: { lat: 48.8556, lng: 2.2876 }
+    },
+    {
+        id: 2,
+        name: 'Rue Crémieux',
+        type: 'Outdoor',
+        category: 'Couleurs',
+        description: 'Petite rue piétonne aux façades colorées. Ambiance pastel et estivale garantie.',
+        imageUrl: 'https://images.unsplash.com/photo-1554907073-97e599bc570c?auto=format&fit=crop&w=800&q=80',
+        location: { lat: 48.8469, lng: 2.3708 }
+    },
+    {
+        id: 3,
+        name: 'Colonnes de Buren',
+        type: 'Outdoor',
+        category: 'Graphic',
+        description: 'Palais-Royal. Contrastes de noir et blanc. Idéal pour des portraits graphiques et éditoriaux.',
+        imageUrl: 'https://images.unsplash.com/photo-1524338198850-8a2ff63aaceb?auto=format&fit=crop&w=800&q=80',
+        location: { lat: 48.8633, lng: 2.3370 }
+    },
+    {
+        id: 4,
+        name: 'BNF Richelieu - Salle Ovale',
+        type: 'Indoor',
+        category: 'Library',
+        description: 'Somptueuse bibliothèque gratuite. Lumière zénithale incroyable. Calme requis.',
+        imageUrl: 'https://images.unsplash.com/photo-1521587760476-6c12a4b040da?auto=format&fit=crop&w=800&q=80',
+        location: { lat: 48.8679, lng: 2.3385 }
+    },
+    {
+        id: 5,
+        name: 'La Défense - Esplanade',
+        type: 'Outdoor',
+        category: 'Futuriste',
+        description: 'Architecture moderne, béton poli et structures massives. Parfait pour le Cyberpunk ou Business.',
+        imageUrl: 'https://images.unsplash.com/photo-1508804059812-376af835584b?auto=format&fit=crop&w=800&q=80',
+        location: { lat: 48.8897, lng: 2.2418 }
+    },
+    {
+        id: 6,
+        name: 'Passage du Grand-Cerf',
+        type: 'Indoor',
+        category: 'Vintage',
+        description: 'L\'un des plus beaux passages couverts. Verrière XIXe et boutiques artisanales.',
+        imageUrl: 'https://images.unsplash.com/photo-1503941421731-f925b6a7a030?auto=format&fit=crop&w=800&q=80',
+        location: { lat: 48.8643, lng: 2.3488 }
+    }
+];
 
 export const MOCK_USERS: User[] = [
     {

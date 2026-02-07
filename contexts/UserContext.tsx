@@ -1,7 +1,8 @@
 
 import React, { createContext, useState, useContext, ReactNode, useCallback, useMemo, useEffect } from 'react';
-import { MOCK_USERS, MOCK_MESSAGES, MOCK_BOOKINGS, CURRENT_USER } from '../constants';
-import type { User, Booking, MessageThread, UserType, MoodboardItem, Review } from '../types';
+import { MOCK_USERS, MOCK_MESSAGES, MOCK_BOOKINGS, CURRENT_USER, MOCK_SPOTS } from '../constants';
+import { fetchRealTimeSpots } from '../services/geminiService';
+import type { User, Booking, MessageThread, UserType, MoodboardItem, Review, Spot } from '../types';
 
 interface UserContextType {
   isLoggedIn: boolean;
@@ -11,6 +12,8 @@ interface UserContextType {
   bookings: Booking[];
   currentUser: User;
   moodboards: Record<string, MoodboardItem[]>;
+  spots: Spot[];
+  isRefreshingSpots: boolean;
   
   login: (email: string, pass: string) => Promise<boolean>;
   register: (name: string, email: string, types: UserType[]) => Promise<void>;
@@ -28,6 +31,7 @@ interface UserContextType {
   refreshLocation: () => Promise<{ lat: number; lng: number }>;
   updateMoodboard: (bookingId: string, items: MoodboardItem[]) => void;
   trackAction: (action: string, data?: any) => void;
+  refreshSpots: () => Promise<void>;
 }
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
@@ -51,40 +55,45 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [isProfileComplete, setProfileComplete] = useState(() => localStorage.getItem('elite_onboarded') === 'true');
   
   const [currentUser, setCurrentUser] = useState<User>(() => storage.get('elite_active_user', { ...CURRENT_USER }));
-  const [users, setUsers] = useState<User[]>(() => {
-    const saved = storage.get('elite_db_users', MOCK_USERS);
-    return saved.map((u: User) => ({
-      ...u,
-      completedShootsCount: u.completedShootsCount || 0,
-      reviews: u.reviews || [],
-      portfolio: u.portfolio || []
-    }));
-  });
-  
+  const [users, setUsers] = useState<User[]>(() => storage.get('elite_db_users', MOCK_USERS));
   const [messages, setMessages] = useState<MessageThread[]>(() => storage.get('elite_db_msgs', MOCK_MESSAGES));
   const [bookings, setBookings] = useState<Booking[]>(() => storage.get('elite_db_bookings', MOCK_BOOKINGS));
   const [moodboards, setMoodboards] = useState<Record<string, MoodboardItem[]>>(() => storage.get('elite_db_moodboards', {}));
+  const [spots, setSpots] = useState<Spot[]>(() => storage.get('elite_db_spots', MOCK_SPOTS));
+  const [isRefreshingSpots, setIsRefreshingSpots] = useState(false);
 
-  // Auto-save cycle
+  // Auto-save
   useEffect(() => {
     storage.set('elite_active_user', currentUser);
-    setUsers(prev => {
-        const index = prev.findIndex(u => u.id === currentUser.id);
-        if (index === -1) return [currentUser, ...prev];
-        const newUsers = [...prev];
-        newUsers[index] = currentUser;
-        return newUsers;
-    });
-  }, [currentUser]);
-
-  useEffect(() => {
     storage.set('elite_db_users', users);
     storage.set('elite_db_msgs', messages);
     storage.set('elite_db_bookings', bookings);
     storage.set('elite_db_moodboards', moodboards);
+    storage.set('elite_db_spots', spots);
     localStorage.setItem('elite_session', isLoggedIn ? 'active' : 'none');
     localStorage.setItem('elite_onboarded', isProfileComplete ? 'true' : 'false');
-  }, [users, messages, bookings, moodboards, isLoggedIn, isProfileComplete]);
+  }, [users, messages, bookings, moodboards, spots, isLoggedIn, isProfileComplete, currentUser]);
+
+  const refreshSpots = useCallback(async () => {
+    setIsRefreshingSpots(true);
+    try {
+      const newSpots = await fetchRealTimeSpots();
+      if (newSpots.length > 0) {
+        setSpots(newSpots);
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setIsRefreshingSpots(false);
+    }
+  }, []);
+
+  // Initial spots refresh if empty or on startup to feel "live"
+  useEffect(() => {
+    if (isLoggedIn && spots.length <= 6) {
+        refreshSpots();
+    }
+  }, [isLoggedIn]);
 
   const refreshLocation = useCallback(async (): Promise<{ lat: number; lng: number }> => {
     return new Promise((resolve, reject) => {
@@ -136,25 +145,19 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     };
 
     const updatedReviews = [...(targetPro.reviews || []), newReview];
-    const newAverageRating = updatedReviews.reduce((acc, r) => acc + r.rating, 0) / updatedReviews.length;
-
     const updatedPro: User = {
         ...targetPro,
         reviews: updatedReviews,
-        rating: newAverageRating,
+        rating: updatedReviews.reduce((acc, r) => acc + r.rating, 0) / updatedReviews.length,
         completedShootsCount: (targetPro.completedShootsCount || 0) + 1
     };
 
     setUsers(prev => prev.map(u => u.id === targetPro.id ? updatedPro : u));
     setBookings(prev => prev.map(b => b.id === booking.id ? { ...b, status: 'Completed', reviewSubmitted: true } : b));
-    
-    if (currentUser.id === targetPro.id) {
-        setCurrentUser(updatedPro);
-    }
   }, [users, currentUser]);
 
   const value = useMemo(() => ({
-    isLoggedIn, isProfileComplete, users, messages, bookings, currentUser, moodboards,
+    isLoggedIn, isProfileComplete, users, messages, bookings, currentUser, moodboards, spots, isRefreshingSpots,
     login: async (email: string) => {
         const found = users.find(u => u.email === email);
         if (found || email === "test@elite.com") {
@@ -203,8 +206,9 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     postReview, 
     refreshLocation,
     updateMoodboard: (bid: string, items: any) => setMoodboards(prev => ({ ...prev, [bid]: items })),
-    trackAction: (a: string, d: any) => console.log(a, d)
-  }), [isLoggedIn, isProfileComplete, users, messages, bookings, currentUser, moodboards, postReview, saveProfile, logout, deleteAccount, refreshLocation, updateCurrentUser]);
+    trackAction: (a: string, d: any) => console.log(a, d),
+    refreshSpots
+  }), [isLoggedIn, isProfileComplete, users, messages, bookings, currentUser, moodboards, spots, isRefreshingSpots, postReview, saveProfile, logout, deleteAccount, refreshLocation, updateCurrentUser, refreshSpots]);
 
   return <UserContext.Provider value={value}>{children}</UserContext.Provider>;
 };

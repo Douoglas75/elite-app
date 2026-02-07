@@ -1,5 +1,4 @@
 
-
 export enum UserType {
   Model = 'Modèle',
   Photographer = 'Photographe',
@@ -30,6 +29,17 @@ export interface MoodboardItem {
   addedBy: string;
   comment: string;
   timestamp: number;
+}
+
+export interface Spot {
+  id: number;
+  name: string;
+  type: 'Indoor' | 'Outdoor';
+  category: string;
+  description: string;
+  imageUrl: string;
+  location: { lat: number; lng: number; };
+  sourceUrl?: string; // URL issue de Google Search Grounding
 }
 
 export interface User {
@@ -109,7 +119,6 @@ export interface Transaction {
   date: string;
 }
 
-// Added QuizQuestion interface to resolve missing export error
 export interface QuizQuestion {
   question: string;
   options: string[];
