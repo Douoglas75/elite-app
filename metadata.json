@@ -1,0 +1,9 @@
+{
+  "name": "Findaphotographer Elite",
+  "description": "L'écosystème ultime pour les créatifs visuels, propulsé par Gemini 3 Pro et ARCore.",
+  "requestFramePermissions": [
+    "geolocation",
+    "camera",
+    "microphone"
+  ]
+}
