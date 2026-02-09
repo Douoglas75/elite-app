@@ -5,7 +5,7 @@ import { getAuth } from "firebase/auth";
 
 // Valeurs extraites de ta capture d'écran Firebase
 const firebaseConfig = {
-  apiKey: "AIzaSyBT3kVvHUsisdo-8boqdOPodM5dgepUKmE",
+  apiKey: "AIzaSyBT3kVvHUsiSdo-8boqdOPodM5dgepUKmE",
   authDomain: "findphotographer-elite.firebaseapp.com",
   projectId: "findphotographer-elite",
   storageBucket: "findphotographer-elite.firebasestorage.app",
