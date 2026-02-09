@@ -5,8 +5,8 @@ import Icon from './Icon';
 import { UserType } from '../types';
 
 const LoginScreen: React.FC = () => {
-  const { login, register } = useUser();
-  const [mode, setMode] = useState<'landing' | 'login' | 'register'>('landing');
+  const { login, register, resetPassword } = useUser();
+  const [mode, setMode] = useState<'landing' | 'login' | 'register' | 'reset'>('landing');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
@@ -56,6 +56,26 @@ const LoginScreen: React.FC = () => {
     }
   };
 
+  const handleResetPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+    setError('');
+    try {
+      if (!email) throw new Error("Veuillez entrer votre email.");
+      await resetPassword(email);
+      setError("Email de réinitialisation envoyé ! Vérifiez vos spams.");
+      // Optional: switch back to login after delay, but user might want to read message
+    } catch (err: any) {
+      console.error(err);
+      let msg = "Erreur lors de l'envoi.";
+      if (err.code === 'auth/user-not-found') msg = "Aucun compte associé à cet email.";
+      if (err.code === 'auth/invalid-email') msg = "Format d'email invalide.";
+      setError(msg);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   if (mode === 'landing') {
     return (
       <div className="flex flex-col items-center justify-center h-full bg-[#050B14] relative overflow-hidden px-8">
@@ -95,10 +115,15 @@ const LoginScreen: React.FC = () => {
         <div className="text-center">
           <Logo className="h-16 mx-auto mb-6" iconOnly={true} />
           <h2 className="text-2xl font-black text-white uppercase tracking-tighter">Authentification <span className="text-[#D2B48C]">Elite</span></h2>
-          <p className="text-slate-500 text-sm mt-1">{mode === 'login' ? 'Identifiants sécurisés requis.' : 'Éligibilité et profil créatif.'}</p>
+          <h2 className="text-2xl font-black text-white uppercase tracking-tighter">Authentification <span className="text-[#D2B48C]">Elite</span></h2>
+          <p className="text-slate-500 text-sm mt-1">
+            {mode === 'login' && 'Identifiants sécurisés requis.'}
+            {mode === 'register' && 'Éligibilité et profil créatif.'}
+            {mode === 'reset' && 'Réinitialisation du mot de passe.'}
+          </p>
         </div>
 
-        <form onSubmit={mode === 'login' ? handleLogin : handleRegister} className="space-y-4">
+        <form onSubmit={mode === 'reset' ? handleResetPassword : (mode === 'login' ? handleLogin : handleRegister)} className="space-y-4">
           {mode === 'register' && (
             <div className="space-y-1">
               <label className="text-[10px] font-black text-slate-500 uppercase ml-2">Nom de l'artiste / Studio</label>
@@ -130,19 +155,35 @@ const LoginScreen: React.FC = () => {
             <label className="text-[10px] font-black text-slate-500 uppercase ml-2">Email Professionnel</label>
             <input type="email" value={email} onChange={e => setEmail(e.target.value)} required className="w-full bg-[#1A2536] border border-white/10 rounded-xl p-4 text-white focus:border-[#D2B48C] outline-none" placeholder="votre@agence.com" />
           </div>
-          <div className="space-y-1">
-            <label className="text-[10px] font-black text-slate-500 uppercase ml-2">Mot de passe</label>
-            <input type="password" value={password} onChange={e => setPassword(e.target.value)} required className="w-full bg-[#1A2536] border border-white/10 rounded-xl p-4 text-white focus:border-[#D2B48C] outline-none" placeholder="••••••••" />
-          </div>
 
-          {error && <p className="text-red-400 text-[10px] font-bold text-center uppercase tracking-widest">{error}</p>}
+          {mode !== 'reset' && (
+            <div className="space-y-1">
+              <label className="text-[10px] font-black text-slate-500 uppercase ml-2">Mot de passe</label>
+              <input type="password" value={password} onChange={e => setPassword(e.target.value)} required className="w-full bg-[#1A2536] border border-white/10 rounded-xl p-4 text-white focus:border-[#D2B48C] outline-none" placeholder="••••••••" />
+            </div>
+          )}
+
+          {error && <p className={`text-[10px] font-bold text-center uppercase tracking-widest ${error.includes('envoyé') ? 'text-green-400' : 'text-red-400'}`}>{error}</p>}
 
           <button type="submit" disabled={isLoading} className="w-full bg-[#D2B48C] text-[#050B14] font-black py-4 rounded-xl shadow-lg hover:brightness-110 transition-all flex items-center justify-center gap-2 uppercase tracking-widest text-xs">
-            {isLoading ? <div className="w-4 h-4 border-2 border-[#050B14] border-t-transparent rounded-full animate-spin" /> : (mode === 'login' ? 'Validation de session' : 'Générer mon accès')}
+            {isLoading ? <div className="w-4 h-4 border-2 border-[#050B14] border-t-transparent rounded-full animate-spin" /> :
+              (mode === 'login' ? 'Validation de session' : (mode === 'register' ? 'Générer mon accès' : 'Envoyer lien de récupération'))
+            }
           </button>
+
+          {mode === 'login' && (
+            <button type="button" onClick={() => setMode('reset')} className="w-full text-center text-[10px] text-slate-500 hover:text-[#D2B48C] font-bold uppercase tracking-wider mt-4">
+              Mot de passe oublié ?
+            </button>
+          )}
+          {mode === 'reset' && (
+            <button type="button" onClick={() => setMode('login')} className="w-full text-center text-[10px] text-slate-500 hover:text-white font-bold uppercase tracking-wider mt-2">
+              Retour à la connexion
+            </button>
+          )}
         </form>
-      </div>
-    </div>
+      </div >
+    </div >
   );
 };
 

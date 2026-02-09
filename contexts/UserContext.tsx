@@ -16,6 +16,7 @@ import {
   signInWithEmailAndPassword,
   signOut,
   onAuthStateChanged,
+  sendPasswordResetEmail,
   User as FirebaseUser
 } from "firebase/auth";
 import { CURRENT_USER, MOCK_SPOTS } from '../constants';
@@ -37,6 +38,7 @@ interface UserContextType {
   login: (email: string, pass: string) => Promise<boolean>;
   register: (name: string, email: string, types: UserType[], password?: string) => Promise<void>;
   logout: () => void;
+  resetPassword: (email: string) => Promise<void>;
   deleteAccount: () => void;
   completeInitialSetup: (data: { name: string; types: UserType[] }) => { startTour: boolean };
   updateCurrentUser: (updatedData: Partial<User>) => void;
@@ -80,9 +82,25 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           setIsLoggedIn(true);
           setProfileComplete(true); // Assuming if they have a doc, they are onboarded for now
         } else {
-          // Profile doesn't exist yet (registration flow handles this, or manual fix needed)
+          // Profile doesn't exist yet (e.g. from previous failed registration)
+          // AUTO-HEAL: Create a default profile to unblock the user
+          console.warn("User authenticated but no Firestore profile. Creating default...");
+
+          const newProfile: User = {
+            ...CURRENT_USER,
+            id: Date.now(),
+            email: user.email || "",
+            name: user.displayName || "Nouveau Membre",
+            types: [],
+            completedShootsCount: 0,
+            avatarUrl: `https://ui-avatars.com/api/?name=${encodeURIComponent(user.email || "User")}&background=D2B48C&color=050B14`,
+          };
+
+          await setDoc(userDocRef, newProfile);
+          setCurrentUser(newProfile);
+
           setIsLoggedIn(true);
-          setProfileComplete(false);
+          setProfileComplete(false); // Valid login, but needs setup
         }
       } else {
         // User is signed out
@@ -227,6 +245,10 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     // window.location.reload(); // Not needed with onAuthStateChanged
   }, []);
 
+  const resetPassword = useCallback(async (email: string) => {
+    await sendPasswordResetEmail(auth, email);
+  }, []);
+
   const completeInitialSetup = useCallback((data: { name: string; types: UserType[] }) => {
     const updated = { ...currentUser, ...data, isPro: true };
     saveProfile(updated);
@@ -264,7 +286,7 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const value = useMemo(() => ({
     isLoggedIn, isProfileComplete, users, messages, bookings, currentUser, moodboards: {}, spots, isRefreshingSpots, isLoadingData,
-    login, register, logout, deleteAccount: logout, completeInitialSetup, completeProOnboarding: () => { },
+    login, register, logout, resetPassword, deleteAccount: logout, completeInitialSetup, completeProOnboarding: () => { },
     updateCurrentUser, saveProfile, startChat, addMessage, confirmBooking: () => { }, updateBookingStatus: () => { },
     postReview: () => { }, refreshLocation, updateMoodboard: () => { }, trackAction: () => { }, refreshSpots
   }), [isLoggedIn, isProfileComplete, users, messages, spots, isRefreshingSpots, isLoadingData, currentUser, login, register, logout, completeInitialSetup, updateCurrentUser, saveProfile, startChat, addMessage, refreshLocation, refreshSpots]);
