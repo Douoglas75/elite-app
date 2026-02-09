@@ -45,6 +45,12 @@ const LoginScreen: React.FC = () => {
       if (err.code === 'auth/email-already-in-use') msg = "Cet email est déjà utilisé.";
       if (err.code === 'auth/weak-password') msg = "Mot de passe trop faible (6 caractères min).";
       if (err.code === 'auth/invalid-email') msg = "Format d'email invalide.";
+
+      // DEBUG: Append the raw code/message to see what's happening
+      if (!['auth/email-already-in-use', 'auth/weak-password', 'auth/invalid-email'].includes(err.code)) {
+        msg += ` (${err.code || err.message})`;
+      }
+
       setError(msg);
       setIsLoading(false);
     }
