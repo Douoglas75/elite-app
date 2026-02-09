@@ -154,40 +154,39 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const refreshLocation = useCallback(async (): Promise<{ lat: number; lng: number }> => {
     return new Promise((resolve, reject) => {
       if (!("geolocation" in navigator)) {
-        reject(new Error("Geolocation not supported"));
+        reject(new Error("Géolocalisation non supportée par votre navigateur."));
         return;
       }
 
       navigator.geolocation.getCurrentPosition(
         async (pos) => {
           const newLoc = { lat: pos.coords.latitude, lng: pos.coords.longitude };
-          // Determine ID to use: currentUser.id usually number, but for Firebase we might want string UID. 
-          // For compatibility with existing components using number ID, we keep logic but careful with types.
-          // Ideally we migrate ID to string globally. For now, assuming current User has valid ID.
-          // Note: If using pure Firebase Auth, user IDs are strings (UID). 
-          // The current app uses numbers for IDs. We need to bridge this.
-          // TEMPORARY FIX: We keep using the numeric ID stored in `currentUser` for the doc reference 
-          // IF we created it that way. BUT, wait, register below uses `user.uid` (string).
-          // WE MUST UNIFY IDs. 
 
-          // CRITICAL FIX: Use `firebaseUser.uid` if properly logged in, else fallback to incompatible map updates.
-
-          // Always update local state for UI responsiveness
+          // 1. Optimistic Update
           setCurrentUser(prev => ({ ...prev, location: newLoc }));
 
+          // 2. Persist to Firestore if logged in
           if (firebaseUser) {
-            const userRef = doc(db, "users", firebaseUser.uid);
-            await updateDoc(userRef, { location: newLoc });
+            try {
+              const userRef = doc(db, "users", firebaseUser.uid);
+              await updateDoc(userRef, { location: newLoc });
+            } catch (err) {
+              console.error("Failed to sync location to Firestore:", err);
+              // We don't reject here because local update succeeded, which is enough for the session
+            }
           }
           resolve(newLoc);
         },
         (err) => {
-          // Fallback location (Paris)
-          const fallbackLoc = { lat: 48.8566, lng: 2.3522 };
-          console.warn("Location denied, using fallback", err);
-          resolve(fallbackLoc);
+          console.warn("Location access denied or error:", err);
+          // Fallback location (Paris) but let component know it failed if needed? 
+          // Actually, for "Live Locate" we want to know it failed.
+          // BUT for app init we might want a fallback.
+          // Let's NOT resolve fallback here, but reject so MapView knows real location failed.
+          // The AppContext or MapView can decide to use a default center.
+          reject(new Error("Accès à la localisation refusé ou impossible."));
         },
-        { enableHighAccuracy: true, timeout: 5000 }
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
       );
     });
   }, [firebaseUser]);
