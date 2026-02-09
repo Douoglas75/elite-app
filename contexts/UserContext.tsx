@@ -152,10 +152,13 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           // WE MUST UNIFY IDs. 
 
           // CRITICAL FIX: Use `firebaseUser.uid` if properly logged in, else fallback to incompatible map updates.
+
+          // Always update local state for UI responsiveness
+          setCurrentUser(prev => ({ ...prev, location: newLoc }));
+
           if (firebaseUser) {
             const userRef = doc(db, "users", firebaseUser.uid);
             await updateDoc(userRef, { location: newLoc });
-            setCurrentUser(prev => ({ ...prev, location: newLoc }));
           }
           resolve(newLoc);
         },
