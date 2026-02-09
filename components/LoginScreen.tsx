@@ -115,7 +115,7 @@ const LoginScreen: React.FC = () => {
         <div className="text-center">
           <Logo className="h-16 mx-auto mb-6" iconOnly={true} />
           <h2 className="text-2xl font-black text-white uppercase tracking-tighter">Authentification <span className="text-[#D2B48C]">Elite</span></h2>
-          <h2 className="text-2xl font-black text-white uppercase tracking-tighter">Authentification <span className="text-[#D2B48C]">Elite</span></h2>
+
           <p className="text-slate-500 text-sm mt-1">
             {mode === 'login' && 'Identifiants sécurisés requis.'}
             {mode === 'register' && 'Éligibilité et profil créatif.'}

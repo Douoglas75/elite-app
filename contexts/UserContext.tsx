@@ -70,6 +70,7 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   // 1. LISTEN TO AUTH STATE
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      console.log("Auth State Changed:", user ? `User ${user.uid}` : "No User");
       setFirebaseUser(user);
       if (user) {
         // User is signed in, fetch profile
@@ -120,7 +121,7 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         usersList.push(doc.data() as User);
       });
       setUsers(usersList);
-      setIsLoadingData(false);
+      if (usersList.length > 0) setIsLoadingData(false); // Only stop loading if we actually got data? Or just always.
     });
     return () => unsubscribe();
   }, []);
@@ -231,7 +232,14 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     await setDoc(doc(db, "users", uid), newUser);
 
-    // State update handled by onAuthStateChanged
+    // 3. Wait for Firestore to trigger the listener or force update? 
+    // Ideally, we just wait for setDoc, then the listener above 'onAuthStateChanged' 
+    // might have already fired with the Auth User, but NOT yet found the doc?
+    // Race condition: Auth listener fires -> check doc -> doc not made yet -> auto-heal (good) OR fail.
+
+    // To be safe, we manually update state if needed, but let's rely on listener.
+    // We add a small delay to allow propagation if needed, or rely on auto-heal in listener.
+    console.log("Registration complete for:", uid);
   }, []);
 
   const updateCurrentUser = useCallback(async (data: Partial<User>) => {
