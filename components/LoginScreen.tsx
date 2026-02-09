@@ -18,9 +18,15 @@ const LoginScreen: React.FC = () => {
     e.preventDefault();
     setIsLoading(true);
     setError('');
-    const success = await login(email, password);
-    if (!success) {
-      setError('Identifiants incorrects. (Demo: test@elite.com)');
+    try {
+      await login(email, password);
+    } catch (err: any) {
+      console.error(err);
+      let msg = "Identifiants incorrects.";
+      if (err.code === 'auth/user-not-found') msg = "Compte introuvable.";
+      if (err.code === 'auth/wrong-password') msg = "Mot de passe incorrect.";
+      if (err.code === 'auth/too-many-requests') msg = "Trop de tentatives. Réessayez plus tard.";
+      setError(msg);
       setIsLoading(false);
     }
   };
@@ -33,9 +39,13 @@ const LoginScreen: React.FC = () => {
     try {
       await register(name, email, [selectedType], password);
       // Success is handled by state change in UserContext (isLoggedIn becomes true)
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
-      setError("Erreur lors de l'inscription. Veuillez réessayer.");
+      let msg = "Erreur lors de l'inscription.";
+      if (err.code === 'auth/email-already-in-use') msg = "Cet email est déjà utilisé.";
+      if (err.code === 'auth/weak-password') msg = "Mot de passe trop faible (6 caractères min).";
+      if (err.code === 'auth/invalid-email') msg = "Format d'email invalide.";
+      setError(msg);
       setIsLoading(false);
     }
   };
